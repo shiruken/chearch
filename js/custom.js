@@ -21,10 +21,10 @@ function loadParams() {
 	}
 }
 
-async function load(url) {
+async function load(url, token) {
 	let obj = null;
 	try {
-		obj = await (await fetch(url)).json();
+		obj = await (await fetch(url, { headers: { "Authorization": `Bearer ${token}` } })).json();
 	} catch (e) {
 		console.log(e);
 	}
@@ -168,7 +168,8 @@ function getFromPS(form, until=-1){
 		path  += "&size=" + form.elements['size'].value;
 	}
 	history.pushState(Date.now(), "Chearch - Results", path)
-	load(psURL).then(value => {
+	token = form.elements['token'].value
+	load(psURL, token).then(value => {
 		try {
 			html = jsonConverter(value.data, form.elements['renderMD'], form.elements['thumbnails'])
 			document.getElementById("results").innerHTML += html;
