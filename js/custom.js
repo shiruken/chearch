@@ -82,9 +82,10 @@ function jsonConverter(data, renderMD, showthumbnails) {
 		<div class="card-content">
 			<div class="content">
 				<div class="field">
-					<span><a href="https://reddit.com/r/${obj.subreddit}">r/${obj.subreddit}</a></span> - 
-					<span><a href="https://reddit.com/user/${obj.author}">u/${obj.author}</a></span>
-					<span class="is-pulled-right">${timestamp}</span>
+					<span><a href="https://reddit.com/r/${obj.subreddit}">r/${obj.subreddit}</a></span> · 
+					<span><a href="https://reddit.com/user/${obj.author}">u/${obj.author}</a></span> · 
+					<span>Score: ${obj.score.toLocaleString()}</span>
+					<span class="is-pulled-right is-size-7">${timestamp}</span>
 				</div>
 			`
 			if (thumbnail) {
