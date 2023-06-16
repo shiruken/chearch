@@ -82,8 +82,8 @@ function jsonConverter(data, renderMD, showthumbnails) {
 		<div class="card-content">
 			<div class="content">
 				<div class="field">
-					<span><a href="https://reddit.com/r/${obj.subreddit}">/r/${obj.subreddit}</a></span> ● 
-					<span><a href="https://reddit.com/user/${obj.author}">/u/${obj.author}</a></span>
+					<span><a href="https://reddit.com/r/${obj.subreddit}">r/${obj.subreddit}</a></span> - 
+					<span><a href="https://reddit.com/user/${obj.author}">u/${obj.author}</a></span>
 					<span class="is-pulled-right">${timestamp}</span>
 				</div>
 			`
@@ -140,9 +140,13 @@ function getFromPS(form, until=-1){
 		psURL += "&subreddit=" + form.elements['subreddit'].value
 		path  += "&subreddit=" + form.elements['subreddit'].value
 	}
-	if (form.elements['score'].value != '') {
-		psURL += "&score=" + form.elements['score'].value
-		path  += "&score=" + form.elements['score'].value
+	if (form.elements['min_score'].value != '') {
+		psURL += "&min_score=" + form.elements['min_score'].value
+		path  += "&min_score=" + form.elements['min_score'].value
+	}
+	if (form.elements['max_score'].value != '') {
+		psURL += "&max_score=" + form.elements['max_score'].value
+		path  += "&max_score=" + form.elements['max_score'].value
 	}
 	if (form.elements['since'].value != '') {
 		since = new Date(form.elements['since'].value).valueOf() / 1000
