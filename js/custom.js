@@ -175,7 +175,7 @@ function getFromPS(form, until=-1){
 		psURL += "&size=" + form.elements['size'].value;
 		path  += "&size=" + form.elements['size'].value;
 	}
-	history.pushState(Date.now(), "Chearch - Results", path)
+	history.pushState(Date.now(), "Chearch - Results", window.location.pathname + path)
 	token = form.elements['token'].value
 	localStorage.setItem("token", token);
 	load(psURL, token).then(value => {
