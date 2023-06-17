@@ -89,3 +89,11 @@ label.checkbox.label {
 	padding: 6px;
 	background-color: #f56565;
 }
+
+#apiInfo {
+	margin: 10px 0px;
+}
+
+#results .button {
+	margin-top: 25px;
+}
