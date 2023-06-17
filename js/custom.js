@@ -19,6 +19,9 @@ function loadParams() {
 			console.log("something went wrong")
 		}
 	}
+	if (sessionStorage.getItem("token")) {
+		document.getElementById("token").value = sessionStorage.getItem("token");
+	}
 }
 
 async function load(url, token) {
@@ -174,6 +177,7 @@ function getFromPS(form, until=-1){
 	}
 	history.pushState(Date.now(), "Chearch - Results", path)
 	token = form.elements['token'].value
+	sessionStorage.setItem("token", token);
 	load(psURL, token).then(value => {
 		try {
 			html = jsonConverter(value.data, form.elements['renderMD'], form.elements['thumbnails'])
@@ -218,11 +222,13 @@ function getFromPS(form, until=-1){
 
 		}
 		catch {
-			if (value.detail == "Invalid token or expired token.")
-				document.getElementById("apiInfo").innerHTML = `Invalid or expired token - <a href="https://api.pushshift.io/signup">Request new token</a> - <a href='${psURL}'>Generated API URL</a>`
-			else
-	 			document.getElementById("apiInfo").innerHTML = `Search error. Pushshift may be down - <a href='${psURL}'>Generated API URL</a>`
-			button.value = "Search"
+			if (value.detail == "Invalid token or expired token.") {
+				sessionStorage.removeItem("token");
+				document.getElementById("apiInfo").innerHTML = `Invalid or expired token - <a href="https://api.pushshift.io/signup">Request new token</a> - <a href='${psURL}'>Generated API URL</a>`;
+			} else {
+	 			document.getElementById("apiInfo").innerHTML = `Search error. Pushshift may be down - <a href='${psURL}'>Generated API URL</a>`;
+			}
+			button.value = "Search";
 		}
 	})
 }
