@@ -19,8 +19,8 @@ function loadParams() {
 			console.log("something went wrong")
 		}
 	}
-	if (sessionStorage.getItem("token")) {
-		document.getElementById("token").value = sessionStorage.getItem("token");
+	if (localStorage.getItem("token")) {
+		document.getElementById("token").value = localStorage.getItem("token");
 	}
 }
 
@@ -177,7 +177,7 @@ function getFromPS(form, until=-1){
 	}
 	history.pushState(Date.now(), "Chearch - Results", path)
 	token = form.elements['token'].value
-	sessionStorage.setItem("token", token);
+	localStorage.setItem("token", token);
 	load(psURL, token).then(value => {
 		try {
 			html = jsonConverter(value.data, form.elements['renderMD'], form.elements['thumbnails'])
