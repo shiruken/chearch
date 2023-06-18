@@ -134,7 +134,7 @@ function getFromPS(form, until=-1){
 		path += "kind=submission"
 	} else {
 		psURL = "https://api.pushshift.io/reddit/comment/search?html_decode=True"
-		path += "kind=submission"
+		path += "kind=comment"
 	}
 	if (form.elements['author'].value != '') {
 		psURL += "&author=" + form.elements['author'].value
