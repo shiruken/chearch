@@ -223,7 +223,7 @@ function getFromPS(form, until=-1){
 		}
 		catch {
 			if (value.detail == "Invalid token or expired token.") {
-				sessionStorage.removeItem("token");
+				localStorage.removeItem("token");
 				document.getElementById("apiInfo").innerHTML = `Invalid or expired token - <a href="https://api.pushshift.io/signup">Request new token</a> - <a href='${psURL}'>Generated API URL</a>`;
 			} else {
 	 			document.getElementById("apiInfo").innerHTML = `Search error. Pushshift may be down - <a href='${psURL}'>Generated API URL</a>`;
