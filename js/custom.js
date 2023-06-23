@@ -2,6 +2,19 @@ document.addEventListener('DOMContentLoaded', function() {
     loadParams()
 }, false);
 
+function getAccessToken() {
+	if (localStorage.getItem("access_token")) {
+		document.getElementById("access_token").value = localStorage.getItem("access_token");
+	}
+}
+
+function clearAccessToken() {
+	if (localStorage.getItem("access_token")) {
+		localStorage.removeItem("access_token");
+		form.elements['access_token'].value = ''
+	}
+}
+
 function loadParams() {
 	const urlParams = new URLSearchParams(window.location.search).entries();
 	for(const param of urlParams) {
@@ -19,15 +32,13 @@ function loadParams() {
 			console.log("something went wrong")
 		}
 	}
-	if (localStorage.getItem("token")) {
-		document.getElementById("token").value = localStorage.getItem("token");
-	}
+	getAccessToken()
 }
 
-async function load(url, token) {
+async function load(url, access_token) {
 	let obj = null;
 	try {
-		obj = await (await fetch(url, { headers: { "Authorization": `Bearer ${token}` } })).json();
+		obj = await (await fetch(url, { headers: { "Authorization": `Bearer ${access_token}` } })).json();
 	} catch (e) {
 		console.log(e);
 	}
@@ -223,8 +234,8 @@ function getFromPS(form, until=-1){
 		}
 		catch {
 			if (value.detail == "Invalid token or expired token.") {
-				localStorage.removeItem("token");
-				document.getElementById("apiInfo").innerHTML = `Invalid or expired token - <a href="https://api.pushshift.io/signup">Request new token</a> - <a href='${psURL}'>Generated API URL</a>`;
+				clearAccessToken()
+				document.getElementById("apiInfo").innerHTML = `Error: Invalid or expired token - <a href="https://api.pushshift.io/login?redirect=search-tool">Request new token</a>`;
 			} else {
 	 			document.getElementById("apiInfo").innerHTML = `Search error. Pushshift may be down - <a href='${psURL}'>Generated API URL</a>`;
 			}

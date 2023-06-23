@@ -75,7 +75,7 @@ body {
 	margin-bottom: 5px;
 }
 .field .button {
-	margin-top: 25px;
+	margin-top: 24px;
 }
 
 label.checkbox.label {
@@ -90,10 +90,7 @@ label.checkbox.label {
 	background-color: #f56565;
 }
 
-#apiInfo {
-	margin: 10px 0px;
-}
-
-#results .button {
-	margin-top: 25px;
+.clearButton {
+    margin-top: 0 !important;
+    margin-left: 0;
 }
