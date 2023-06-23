@@ -187,9 +187,9 @@ function getFromPS(form, until=-1){
 		path  += "&size=" + form.elements['size'].value;
 	}
 	history.pushState(Date.now(), "Chearch - Results", window.location.pathname + path)
-	token = form.elements['token'].value
-	localStorage.setItem("token", token);
-	load(psURL, token).then(value => {
+	access_token = form.elements['access_token'].value
+	localStorage.setItem("access_token", access_token);
+	load(psURL, access_token).then(value => {
 		try {
 			html = jsonConverter(value.data, form.elements['renderMD'], form.elements['thumbnails'])
 			document.getElementById("results").innerHTML += html;
