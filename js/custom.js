@@ -127,17 +127,16 @@ function jsonConverter(data, renderMD, showthumbnails) {
 			`
 			}
 	});
-	if (count > 0){	html += `<input type="submit" class="button is-danger is-fullwidth" value="Fetch More" id="fetch-${until}" onclick="fetchMore(${until})">`}
+	if (count > 0){	html += `<button type="submit" class="button is-danger is-fullwidth" id="fetch-${until}" onclick="fetchMore(${until})">Fetch More</button>`}
 	return html
 }
 
 function getFromPS(form, until=-1){
-	button = document.getElementById("searchButton")
-	button.value = "Searching..."
-	if (until == -1){ document.getElementById("results").innerHTML="" }
-	else {
-		moreButton = document.getElementById("fetch-"+until)
-		moreButton.value = "Fetching..."
+	if (until == -1){
+		document.getElementById("searchButton").classList.add("is-loading");
+		document.getElementById("results").innerHTML="" 
+	} else {
+		document.getElementById("fetch-"+until).classList.add("is-loading");
 	}
 	path = "?"
 	if (form.elements['kind'].value == "submission") {
@@ -171,9 +170,9 @@ function getFromPS(form, until=-1){
 	if (until != -1) {
 		psURL += "&until=" + until
 	} else if (form.elements['until'].value != '') {
-			until = new Date(form.elements['until'].value).valueOf() / 1000
-			psURL += "&until=" + until
-			path += "&until=" + until
+		until = new Date(form.elements['until'].value).valueOf() / 1000
+		psURL += "&until=" + until
+		path += "&until=" + until
 	}
 	if (form.elements['q'].value != '') {
 		psURL += "&q=" + encodeURIComponent(form.elements['q'].value)
@@ -214,7 +213,8 @@ function getFromPS(form, until=-1){
 
 
 			document.getElementById("apiInfo").innerHTML = Object.keys(value.data).length + ` Results - <a href='${psURL}'>Generated API URL</a>`
-			button.value = "Search"
+			// button.value = "Search"
+			document.getElementById("searchButton").classList.remove("is-loading");
 			try { document.getElementById("fetch-"+until).remove() }
 			catch {}
 
@@ -239,7 +239,7 @@ function getFromPS(form, until=-1){
 			} else {
 	 			document.getElementById("apiInfo").innerHTML = `Search error. Pushshift may be down - <a href='${psURL}'>Generated API URL</a>`;
 			}
-			button.value = "Search";
+			document.getElementById("searchButton").classList.remove("is-loading");
 		}
 	})
 }

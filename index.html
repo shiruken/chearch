@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<title>Chearch - Pushshift Frontend</title>
+		<title>Reddit Search</title>
 		<link rel="stylesheet" href="css/bulma.min.css">
 		<link rel="stylesheet" href="css/custom.css">
 	</head>
@@ -14,6 +14,22 @@
 				<h2 class="subtitle text-red-300 text-center">powered by Pushshift</h2>
 				<form class="form-horizontal" action="#" id="searchForm">
 					<fieldset>
+						<div class="field is-horizontal">
+							<div class="field-body">
+								<div class="field">
+									<label class="label text-xs uppercase font-bold text-gray-100" for="access_token">Access Token <a href="https://api.pushshift.io/signup">(Request Token)</a></label>
+									<div class="field has-addons">
+										<p class="control is-expanded">
+											<input id="access_token" name="access_token" type="text" class="input" placeholder="This field is required" required>
+										</p>
+										<p class="control clearButton" title="clear access token">
+											<a class="button is-danger is-outlined clearButton" onclick="clearAccessToken()">Clear</a>
+										</p>
+									</div>
+									<p></p>
+								</div>
+							</div>
+						</div>
 						<div class="field is-horizontal">
 							<div class="field-body">
 								<div class="field">
@@ -128,25 +144,8 @@
 						<div class="field is-horizontal">
 							<div class="field-body">
 								<div class="field">
-									<label class="label text-xs uppercase font-bold text-gray-100">Access Token <a href="https://api.pushshift.io/signup">(Request Token)</a>
-</label>
-									<div class="field has-addons">
-										<p class="control is-expanded">
-											<input id="access_token" name="access_token" type="text" class="input " placeholder="This field is required" required="">
-										</p>
-										<p class="control clearButton" title="clear access token">
-											<a class="button clearButton" onclick="clearAccessToken()">
-												Clear
-											</a>
-										</p>
-									</div>
-									<p></p>
-								</div>
-							</div>
-							<div class="field-body">
-								<div class="field">
 									<div class="control is-expanded">
-										<input type="submit" class="button is-danger is-fullwidth" value="Search" id="searchButton">
+										<button type="submit" class="button is-danger is-fullwidth" id="searchButton">Search</button>
 									</div>
 								</div>
 							</div>
@@ -155,10 +154,6 @@
 				</form>
 				<div id="apiInfo" class="has-text-centered"></div>
 				<div id="results"></div>
-				<div id="footer">
-					<br>
-					<p class="has-text-centered">🎵Take 'em to chearch🎵</p>
-				</div>
 			</div>
 		</section>
 		<script src="js/snuownd.js"></script>
