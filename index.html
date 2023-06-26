@@ -1,158 +1,136 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" class="has-background-black-bis">
 	<head>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<title>Reddit Search</title>
+		<meta name="description" content="Reddit search powered by Pushshift">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="stylesheet" href="css/bulma.min.css">
 		<link rel="stylesheet" href="css/custom.css">
 	</head>
-	<body class="bg-dark text-gray-100">
+	<body>
 		<section class="section">
-			<div class="container">
-				<h1 class="title text-red-300 text-center">Reddit Search</h1>
-				<h2 class="subtitle text-red-300 text-center">powered by Pushshift</h2>
-				<form class="form-horizontal" action="#" id="searchForm">
-					<fieldset>
-						<div class="field is-horizontal">
-							<div class="field-body">
-								<div class="field">
-									<label class="label text-xs uppercase font-bold text-gray-100" for="access_token">Access Token <a href="https://api.pushshift.io/signup">(Request Token)</a></label>
-									<div class="field has-addons">
-										<p class="control is-expanded">
-											<input id="access_token" name="access_token" type="text" class="input" placeholder="This field is required" required>
-										</p>
-										<p class="control clearButton" title="clear access token">
-											<a class="button is-danger is-outlined clearButton" onclick="clearAccessToken()">Clear</a>
-										</p>
-									</div>
-									<p></p>
+			<div class="container is-max-desktop">
+				<h1 class="title has-text-danger has-text-centered">Reddit Search</h1>
+				<h2 class="subtitle has-text-danger has-text-centered">Powered by Pushshift</h2>
+				<form id="searchForm">
+					<div class="field">
+						<label class="label is-uppercase has-text-grey-lighter is-size-7" for="access_token">
+							Access Token (<a href="https://api.pushshift.io/signup" target="_blank" title="Request access token from Pushshift" class="has-text-danger">Request Token</a>)
+						</label>
+						<div class="control">
+							<div class="field has-addons">
+								<div class="control is-expanded">
+									<input id="access_token" name="access_token" type="text" class="input" placeholder="Required" required>
+								</div>
+								<div class="control">
+									<a class="button is-danger is-outlined" onclick="clearAccessToken()" title="Clear cached access token">Clear</a>
 								</div>
 							</div>
 						</div>
-						<div class="field is-horizontal">
-							<div class="field-body">
-								<div class="field">
-									<label class="label text-xs uppercase font-bold text-gray-100" for="author">Username</label>
-									<div class="control">
-										<input id="author" name="author" type="text" class="input ">
-									</div>
+					</div>
+					<div class="field is-horizontal">
+						<div class="field-body">
+							<div class="field">
+								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="author">Username</label>
+								<div class="control">
+									<input id="author" name="author" type="text" class="input">
 								</div>
 							</div>
-							<div class="field-body">
-								<div class="field">
-									<label class="label text-xs uppercase font-bold text-gray-100" for="subreddit">Subreddit</label>
-									<div class="control">
-										<input id="subreddit" name="subreddit" type="text" class="input ">
-									</div>
-								</div>
-							</div>
-						</div>
-						<div class="field is-horizontal">
-							<div class="field-body">
-								<div class="field">
-									<label class="label" for="kind">Search For</label>
-									<div class="control is-expanded">
-										<div class="select is-fullwidth">
-											<select id="kind" name="kind" class="">
-												<option value="submission">Posts</option>
-												<option value="comment">Comments</option>
-											</select>
-										</div>
-									</div>
-								</div>
-							</div>
-							<div class="field-body">
-								<div class="field">
-									<label class="label" for="size">Num. Returned</label>
-									<div class="control">
-										<input id="size" name="size" type="text" placeholder="100" class="input ">
-									</div>
-								</div>
-							</div>
-							<div class="field-body">
-								<div class="field">
-									<label class="label" for="min_score">Min Score</label>
-									<div class="control">
-										<input id="min_score" name="min_score" type="text" class="input ">
-									</div>
-								</div>
-							</div>
-							<div class="field-body">
-								<div class="field">
-									<label class="label" for="max_score">Max Score</label>
-									<div class="control">
-										<input id="max_score" name="max_score" type="text" class="input ">
-									</div>
+							<div class="field">
+								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="subreddit">Subreddit</label>
+								<div class="control">
+									<input id="subreddit" name="subreddit" type="text" class="input">
 								</div>
 							</div>
 						</div>
-						<div class="field is-horizontal">
-							<div class="field-body">
-								<div class="field">
-									<label class="label" for="since">Since</label>
-									<div class="control">
-										<input id="since" name="since" type="datetime-local" class="input ">
+					</div>
+					<div class="field is-horizontal">
+						<div class="field-body">
+							<div class="field">
+								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="kind">Search For</label>
+								<div class="control">
+									<div class="select is-fullwidth">
+										<select id="kind" name="kind">
+											<option value="submission">Posts</option>
+											<option value="comment">Comments</option>
+										</select>
 									</div>
 								</div>
 							</div>
-							<div class="field-body">
-								<div class="field">
-									<label class="label" for="until">Until</label>
-									<div class="control">
-										<input id="until" name="until" type="datetime-local" class="input ">
-									</div>
+							<div class="field">
+								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="limit">Number To Request</label>
+								<div class="control">
+									<input id="limit" name="limit" type="text" placeholder="100" class="input">
 								</div>
 							</div>
-						</div>
-						<div class="field is-horizontal">
-							<div class="field-body">
-								<div class="field">
-									<label class="label" for="q">Search Input</label>
-									<div class="control is-expanded">
-										<input id="q" name="q" type="text" class="input search-query">
-									</div>
+							<div class="field">
+								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="min_score">Min Score</label>
+								<div class="control">
+									<input id="min_score" name="min_score" type="text" class="input">
 								</div>
 							</div>
-						</div>
-						<div class="field is-horizontal">
-							<div class="field-body">
-								<div class="field">
-									<div class="control">
-										<label class="checkbox label">
-											<input type="checkbox" id="renderMD" name="renderMD" checked> Render Markdown</label>
-									</div>
-								</div>
-							</div>
-							<div class="field-body">
-								<div class="field">
-									<div class="control">
-										<label class="checkbox label">
-											<input type="checkbox" id="highlight" name="highlight" checked> Highlight Search Term(s)</label>
-									</div>
-								</div>
-							</div>
-							<div class="field-body">
-								<div class="field">
-									<div class="control">
-										<label class="checkbox label">
-											<input type="checkbox" id="thumbnails" name="thumbnails" checked> Show Thumbnails</label>
-									</div>
+							<div class="field">
+								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="max_score">Max Score</label>
+								<div class="control">
+									<input id="max_score" name="max_score" type="text" class="input">
 								</div>
 							</div>
 						</div>
-						<div class="field is-horizontal">
-							<div class="field-body">
-								<div class="field">
-									<div class="control is-expanded">
-										<button type="submit" class="button is-danger is-fullwidth" id="searchButton">Search</button>
-									</div>
+					</div>
+					<div class="field is-horizontal">
+						<div class="field-body">
+							<div class="field">
+								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="since">Since</label>
+								<div class="control">
+									<input id="since" name="since" type="datetime-local" class="input">
+								</div>
+							</div>
+							<div class="field">
+								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="until">Until</label>
+								<div class="control">
+									<input id="until" name="until" type="datetime-local" class="input">
 								</div>
 							</div>
 						</div>
-					</fieldset>
+					</div>
+					<div class="field">
+						<div class="field">
+							<label class="label is-uppercase has-text-grey-lighter is-size-7" for="q">Search Input</label>
+							<div class="control">
+								<input id="q" name="q" type="text" class="input">
+							</div>
+						</div>
+					</div>
+					<div class="field my-3">
+						<div class="field-body">
+							<div class="field">
+								<label class="checkbox has-text-grey-lighter is-size-6">
+									<input type="checkbox" id="renderMD" name="renderMD" checked>
+									Render Markdown
+								</label>
+							</div>
+							<div class="field">
+								<label class="checkbox has-text-grey-lighter is-size-6">
+									<input type="checkbox" id="highlight" name="highlight" checked>
+									Highlight Search Term(s)
+								</label>
+							</div>
+							<div class="field">
+								<label class="checkbox has-text-grey-lighter is-size-6">
+									<input type="checkbox" id="thumbnails" name="thumbnails" checked>
+									Show Thumbnails
+								</label>
+							</div>
+						</div>
+					</div>
+					<div class="field my-3">
+						<div class="control is-expanded">
+							<button type="submit" class="button is-danger is-fullwidth" id="searchButton">Search</button>
+						</div>
+					</div>
 				</form>
-				<div id="apiInfo" class="has-text-centered"></div>
+				<div id="apiInfo" class="has-text-centered has-text-grey-lighter my-3"></div>
 				<div id="results"></div>
 			</div>
 		</section>

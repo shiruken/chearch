@@ -127,7 +127,7 @@ function jsonConverter(data, renderMD, showthumbnails) {
 			`
 			}
 	});
-	if (count > 0){	html += `<button type="submit" class="button is-danger is-fullwidth" id="fetch-${until}" onclick="fetchMore(${until})">Fetch More</button>`}
+	if (count > 0){	html += `<button type="submit" class="button is-danger is-fullwidth my-5" id="fetch-${until}" onclick="fetchMore(${until})">Fetch More</button>`}
 	return html
 }
 
@@ -178,14 +178,14 @@ function getFromPS(form, until=-1){
 		psURL += "&q=" + encodeURIComponent(form.elements['q'].value)
 		path  += "&q=" + encodeURIComponent(form.elements['q'].value)
 	}
-	if (form.elements['size'].value == '') {
-		psURL += "&size=100"
-		path  += "&size=100"
+	if (form.elements['limit'].value == '') {
+		psURL += "&limit=100"
+		path  += "&limit=100"
 	} else {
-		psURL += "&size=" + form.elements['size'].value;
-		path  += "&size=" + form.elements['size'].value;
+		psURL += "&limit=" + form.elements['limit'].value;
+		path  += "&limit=" + form.elements['limit'].value;
 	}
-	history.pushState(Date.now(), "Chearch - Results", window.location.pathname + path)
+	history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path)
 	access_token = form.elements['access_token'].value
 	localStorage.setItem("access_token", access_token);
 	load(psURL, access_token).then(value => {
@@ -211,8 +211,7 @@ function getFromPS(form, until=-1){
 				}
 			}
 
-
-			document.getElementById("apiInfo").innerHTML = Object.keys(value.data).length + ` Results - <a href='${psURL}'>Generated API URL</a>`
+			document.getElementById("apiInfo").innerHTML = Object.keys(value.data).length + ` Results - <a href='${psURL}' target='_blank' title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>`
 			// button.value = "Search"
 			document.getElementById("searchButton").classList.remove("is-loading");
 			try { document.getElementById("fetch-"+until).remove() }
@@ -235,9 +234,9 @@ function getFromPS(form, until=-1){
 		catch {
 			if (value.detail == "Invalid token or expired token.") {
 				clearAccessToken()
-				document.getElementById("apiInfo").innerHTML = `Error: Invalid or expired token - <a href="https://api.pushshift.io/login?redirect=search-tool">Request new token</a>`;
+				document.getElementById("apiInfo").innerHTML = `Invalid or Expired Token - <a href="https://api.pushshift.io/signup" target="_blank" title="Request access token from Pushshift" class="has-text-danger">Request New Token</a>`;
 			} else {
-	 			document.getElementById("apiInfo").innerHTML = `Search error. Pushshift may be down - <a href='${psURL}'>Generated API URL</a>`;
+	 			document.getElementById("apiInfo").innerHTML = `Search Error: Pushshift may be down - <a href='${psURL}' target='_blank' title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>`;
 			}
 			document.getElementById("searchButton").classList.remove("is-loading");
 		}
