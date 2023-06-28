@@ -19,6 +19,9 @@
 .markdown a:hover, .markdown a:hover strong {
 	color: #EE1742; /* .has-text-danger:hover */
 }
+span.score {
+	white-space: nowrap;
+}
 @media screen and (max-width: 768px) {
 	/* Reduce spacing between level items on mobile */
 	.level-left + .level-right {

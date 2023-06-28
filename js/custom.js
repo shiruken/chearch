@@ -107,7 +107,7 @@ function jsonConverter(data, renderMD, showthumbnails) {
 			html += `
 							<p>
 								<a href="${link}" title="View comment on Reddit" class="has-text-light has-text-weight-bold">Comment Link</a> 
-								<span class="has-text-grey-light is-size-7">[Score: ${obj.score.toLocaleString()}]</span>
+								<span class="has-text-grey-light is-size-7 score">[Score: ${obj.score.toLocaleString()}]</span>
 							</p>
 						</div>
 					</div>
@@ -119,7 +119,7 @@ function jsonConverter(data, renderMD, showthumbnails) {
 			html += `
 							<p>
 								<a href="https://reddit.com${obj.permalink}" title="View post on Reddit" class="has-text-light has-text-weight-bold">${obj.title}</a> 
-								<span class="has-text-grey-light is-size-7">[Score: ${obj.score.toLocaleString()}]</span>
+								<span class="has-text-grey-light is-size-7 score">[Score: ${obj.score.toLocaleString()}]</span>
 							</p>
 			`;
 			if (!obj.is_self) {  // Link Post
