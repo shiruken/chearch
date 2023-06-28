@@ -50,85 +50,117 @@ function fetchMore(until) {
 }
 
 function jsonConverter(data, renderMD, showthumbnails) {
-	count = 0
-	html = ""
-	until = 2147483647
+	let count = 0;
+	let html = "";
+	let until = 2147483647;
+	
 	data.forEach(obj => {
-		count += 1
-		display = true
-		until = obj.created_utc
-		timestamp = new Date(obj.created_utc * 1000)
-		timestamp = timestamp.toString().split(" (")[0]
-		thumbnail = ""
-		if (obj.is_self == false) {
-			text = obj.url
-			link = "https://reddit.com" + obj.permalink
-			title = obj.title
-			if (showthumbnails.checked) {
-				if (obj.thumbnail.endsWith(".jpg")) {
-					thumbnail = obj.thumbnail
-				}
-			}
-		} else {
-			if ("body" in obj) {
-				text = obj.body
-				if (obj.permalink) {
-					link = "https://reddit.com" + obj.permalink
-				} else {
-					link = `https://reddit.com//comments/${obj.link_id.replace("t3_","")}/-/${obj.id}`  
-				}
-				title = "comment"
-			} else if ("selftext" in obj) {
-				text = obj.selftext
-				link = obj.url
-				title = obj.title
+		count += 1;
+		until = obj.created_utc;
+		
+		let timestamp = new Date(obj.created_utc * 1000);
+		timestamp = timestamp.toString().split(" (")[0];
+
+		html += `
+			<div class="card has-text-grey-light my-3">
+				<div class="card-content">
+					<div class="content mb-3">
+						<nav class="level">
+							<div class="level-left">
+								<div class="level-item is-block-mobile">
+									<a href="https://reddit.com/r/${obj.subreddit}" title="View subreddit on Reddit" class="has-text-danger mr-1">r/${obj.subreddit}</a>
+									·
+									<a href="https://reddit.com/user/${obj.author}" title="View user on Reddit" class="has-text-danger ml-1">u/${obj.author}</a>
+								</div>
+							</div>
+							<div class="level-right">
+								<div class="level-item is-block-mobile">
+									<p class="is-size-7">${timestamp}</p>
+								</div>
+							</div>
+						</nav>
+					</div>
+					<div class="media mb-1">
+		`;
+
+		if (showthumbnails.checked) {
+			if ("thumbnail" in obj && obj.thumbnail.endsWith(".jpg")) {
+				html += `
+						<div class="media-left">
+							<figure class="image is-96x96">
+								<a href="https://reddit.com${obj.permalink}" title="View post on Reddit"><img src="${obj.thumbnail}" alt="Post Thumbnail"></a>
+							</figure>
+						</div>
+				`;
 			}
 		}
 
-		if (renderMD.checked) {
-				markUp = SnuOwnd.getParser().render(text)
-		} else {
-				markUp = text
-				markUp = markUp.replaceAll("\n","<br>")
-		}
-			html += `
-	<div class="card">
-		<div class="card-content">
-			<div class="content">
-				<div class="field">
-					<span><a href="https://reddit.com/r/${obj.subreddit}">r/${obj.subreddit}</a></span> · 
-					<span><a href="https://reddit.com/user/${obj.author}">u/${obj.author}</a></span> · 
-					<span>Score: ${obj.score.toLocaleString()}</span>
-					<span class="is-pulled-right is-size-7">${timestamp}</span>
-				</div>
-			`
-			if (thumbnail) {
-				html += `
-				<div class="flex">
-					<img src=${thumbnail} style="height:100px;width:100px;margin-right:5px"></img>
-					<div>
-						<a href="${link}" class="reddit-title">${title}</a>
-						<div class="markdown">${markUp}</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-			`
+		html += 		`<div class="media-content">`;
+
+		if ("link_id" in obj) {  // Comment
+			let link;
+			if (obj.permalink) {
+				link = "https://reddit.com" + obj.permalink;
 			} else {
+				link = `https://reddit.com//comments/${obj.link_id.replace("t3_", "")}/-/${obj.id}`;
+			}
+			html += `
+							<p>
+								<a href="${link}" title="View comment on Reddit" class="has-text-light has-text-weight-bold">Comment Link</a> 
+								<span class="has-text-grey-light is-size-7">[Score: ${obj.score.toLocaleString()}]</span>
+							</p>
+						</div>
+					</div>
+					<div class="content markdown mt-3">
+						${formatText(obj.body, renderMD.checked)}
+					</div>
+			`;
+		} else {  // Post
+			html += `
+							<p>
+								<a href="https://reddit.com${obj.permalink}" title="View post on Reddit" class="has-text-light has-text-weight-bold">${obj.title}</a> 
+								<span class="has-text-grey-light is-size-7">[Score: ${obj.score.toLocaleString()}]</span>
+							</p>
+			`;
+			if (!obj.is_self) {  // Link Post
 				html += `
-				<div>
-					<a href="${link}" class="reddit-title">${title}</a>
-					<div class="markdown">${markUp}</div>
+							<p>
+								<a href="${obj.url}" title="View linked URL" class="has-text-danger">${obj.url}</a>
+							</p>
+						</div>
+					</div>
+				`;
+			} else {  // Self Post
+				html += `
+						</div>
+					</div>
+					<div class="content markdown mt-3">
+						${formatText(obj.selftext, renderMD.checked)}
+					</div>
+				`;
+			}
+		}
+
+		html += `
 				</div>
 			</div>
-		</div>
-	</div>
-			`
-			}
+		`;
+
 	});
-	if (count > 0){	html += `<button type="submit" class="button is-danger is-fullwidth my-5" id="fetch-${until}" onclick="fetchMore(${until})">Fetch More</button>`}
-	return html
+
+	if (count > 0) {
+		html += `<button type="submit" class="button is-danger is-fullwidth my-5" id="fetch-${until}" onclick="fetchMore(${until})">Fetch More</button>`;
+	}
+
+	return html;
+}
+
+function formatText(text, use_markdown) {
+	if (use_markdown) {
+		return SnuOwnd.getParser().render(text);
+	} else {
+		return text.replaceAll("\n", "<br>");
+	}
 }
 
 function getFromPS(form, until=-1){
@@ -212,7 +244,6 @@ function getFromPS(form, until=-1){
 			}
 
 			document.getElementById("apiInfo").innerHTML = Object.keys(value.data).length + ` Results - <a href='${psURL}' target='_blank' title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>`
-			// button.value = "Search"
 			document.getElementById("searchButton").classList.remove("is-loading");
 			try { document.getElementById("fetch-"+until).remove() }
 			catch {}
@@ -231,7 +262,8 @@ function getFromPS(form, until=-1){
 			}
 
 		}
-		catch {
+		catch (error) {
+			console.log(error);
 			if (value.detail == "Invalid token or expired token.") {
 				clearAccessToken()
 				document.getElementById("apiInfo").innerHTML = `Invalid or Expired Token - <a href="https://api.pushshift.io/signup" target="_blank" title="Request access token from Pushshift" class="has-text-danger">Request New Token</a>`;

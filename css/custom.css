@@ -1,3 +1,35 @@
+.card {
+	background-color: #1A202C;
+	box-shadow: none;
+}
+.card-content {
+	padding: 0.75rem 1rem;
+}
+.image img {
+	width: 96px;
+	height: 96px;
+	object-fit: cover;
+}
+.markdown, .markdown strong {
+	color: #F5F5F5; /* .has-text-light */
+}
+.markdown a, .markdown a strong {
+	color: #F14668; /* .has-text-danger */
+}
+.markdown a:hover, .markdown a:hover strong {
+	color: #EE1742; /* .has-text-danger:hover */
+}
+@media screen and (max-width: 768px) {
+	/* Reduce spacing between level items on mobile */
+	.level-left + .level-right {
+		margin-top: 0rem;
+	}
+	/* Reduce size of thumbnails on mobile */
+	figure.image.is-96x96, .image img {
+		width: 48px;
+		height: 48px;
+	}
+}
 /* Fix for equalizing select input width in horizontal form */
 @media screen and (min-width: 769px) {
 	.field-body > .field:not(.is-narrow) {
@@ -8,7 +40,7 @@
 		flex: 1;
 	}
 }
-.card {
+/* .card {
 	--bg-opacity: 1;
 	background-color: #1a202c;
 	background-color: rgba(26, 32, 44, var(--bg-opacity));
@@ -48,4 +80,4 @@
 	margin-left: 5px;
 	padding: 6px;
 	background-color: #f56565;
-}
+} */
