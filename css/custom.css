@@ -22,6 +22,17 @@
 span.score {
 	white-space: nowrap;
 }
+.delete, .delete:focus {
+	background-color: #F14668; /* .is-danger */
+	margin-left: 3px;
+	vertical-align: super;
+}
+.delete:hover {
+	background-color: #EE1742; /* .is-danger:hover */
+}
+.closed {
+	transform: rotate(45deg);
+}
 @media screen and (max-width: 768px) {
 	/* Reduce spacing between level items on mobile */
 	.level-left + .level-right {

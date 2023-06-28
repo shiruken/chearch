@@ -236,7 +236,7 @@ function getFromPS(form, until=-1) {
 			html = generateHTML(value.data, form.elements['renderMD'], form.elements['thumbnails']);
 			document.getElementById("results").innerHTML += html;
 
-			// Highlight Search Term(s)
+			// Highlight search terms
 			searchTerm = form.elements['q'].value;
 			if (highlight.checked && searchTerm.length > 0) {
 				let instance = new Mark(document.querySelector("#results"));
@@ -264,19 +264,20 @@ function getFromPS(form, until=-1) {
 				document.getElementById("fetch-" + until).remove();
 			} catch {}
 
-			// Inline image expansion
-			let list = document.querySelectorAll(".markdown a");
-			for (let item of list) {
-				let link = item.href;
-				if (link.endsWith(".jpg") || link.endsWith(".png") || link.endsWith(".gif")) {
-					let node = document.createElement("button");
-					node.setAttribute("onclick", "directExpand('" + link + "')");
-					node.classList.add("button", "is-danger", "is-small");
-					let textnode = document.createTextNode("+");
-					node.appendChild(textnode);
-					item.after(node);
+			// Inject buttons for expanding linked images
+			let links = document.querySelectorAll(".markdown a");
+			for (let link of links) {
+				if (link.nextElementSibling == null || link.nextElementSibling.tagName != "BUTTON") {
+					let url = link.href;
+					if (url.endsWith(".jpg") || url.endsWith(".png") || url.endsWith(".gif")) {
+						let button = document.createElement("button");
+						button.classList.add("delete", "closed");
+						button.setAttribute("onclick", "directExpand(this);");
+						link.after(button);
+					}
 				}
 			}
+
 		} catch (e) {
 			console.log(e);
 			if (value.detail == "Invalid token or expired token.") {
@@ -296,29 +297,21 @@ function getFromPS(form, until=-1) {
 	})
 }
 
-function directExpand(link) {
-	let img = document.createElement('img');
-	img.src = link;
-	let els = document.querySelector("a[href='" + link + "']");
-	els = els.nextElementSibling;
-	els.innerHTML = '-';
-	if (!els.nextElementSibling || els.nextElementSibling.id != link) {
-		let node = document.createElement("div");
-		node.id = link;
-		els.after(node);
-	}
-	let iels = els.nextElementSibling;
-	if (!iels.hasChildNodes()) {
-		iels.appendChild(img);
+function directExpand(button) {
+	let link = button.previousElementSibling;
+	let url = link.href;
+	if (button.classList.contains("closed")) {
+		let span = document.createElement("span");
+		span.style.display = "block";
+		let img = document.createElement("img");
+		img.src = url;
+		span.appendChild(img);
+		button.after(span);
 	} else {
-		if (iels.style.display == 'none') {
-			els.innerHTML = '-';
-			iels.style.display = 'block';
-		} else {
-			els.innerHTML = '+';
-			iels.style.display = 'none';
-		}
+		let span = button.nextElementSibling;
+		span.remove();
 	}
+	button.classList.toggle("closed");
 }
 
 const form = document.getElementById('searchForm');
