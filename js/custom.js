@@ -137,7 +137,7 @@ function search(form, until=-1) {
 			} catch {}
 
 			// Inject buttons for expanding linked images
-			let links = document.querySelectorAll(".markdown a");
+			let links = document.querySelectorAll(".expand-image a");
 			for (let link of links) {
 				if (link.nextElementSibling == null || link.nextElementSibling.tagName != "BUTTON") {
 					let url = link.href;
@@ -237,7 +237,7 @@ function generateHTML(data, renderMD, showthumbnails) {
 							</p>
 						</div>
 					</div>
-					<div class="content markdown mt-3">
+					<div class="content mt-3 markdown expand-image">
 						${formatText(obj.body, renderMD.checked)}
 					</div>
 			`;
@@ -250,7 +250,7 @@ function generateHTML(data, renderMD, showthumbnails) {
 			`;
 			if (!obj.is_self) {  // Link Post
 				html += `
-							<p>
+							<p class="expand-image">
 								<a href="${obj.url}" title="View linked URL" class="has-text-danger">${obj.url}</a>
 							</p>
 						</div>
@@ -260,7 +260,7 @@ function generateHTML(data, renderMD, showthumbnails) {
 				html += `
 						</div>
 					</div>
-					<div class="content markdown mt-3">
+					<div class="content mt-3 markdown expand-image">
 						${formatText(obj.selftext, renderMD.checked)}
 					</div>
 				`;
