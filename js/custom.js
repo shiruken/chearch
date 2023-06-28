@@ -2,18 +2,11 @@ document.addEventListener('DOMContentLoaded', function() {
     loadParams();
 }, false);
 
-function getAccessToken() {
-	if (localStorage.getItem("access_token")) {
-		document.getElementById("access_token").value = localStorage.getItem("access_token");
-	}
-}
-
-function clearAccessToken() {
-	if (localStorage.getItem("access_token")) {
-		localStorage.removeItem("access_token");
-		form.elements['access_token'].value = "";
-	}
-}
+const form = document.getElementById('searchForm');
+form.addEventListener('submit', (event) => {
+	event.preventDefault();
+	search(form);
+});
 
 function loadParams() {
 	const urlParams = new URLSearchParams(window.location.search).entries();
@@ -35,142 +28,21 @@ function loadParams() {
 	getAccessToken();
 }
 
-async function load(url, access_token) {
-	let obj = null;
-	try {
-		let headers = { headers: { "Authorization": `Bearer ${access_token}` } };
-		obj = await fetch(url, headers);
-		obj = await obj.json();
-	} catch (e) {
-		console.log(e);
+function getAccessToken() {
+	if (localStorage.getItem("access_token")) {
+		document.getElementById("access_token").value = localStorage.getItem("access_token");
 	}
-	return obj;
 }
 
-function fetchMore(until) {
-	getFromPS(form, until);
+function clearAccessToken() {
+	if (localStorage.getItem("access_token")) {
+		localStorage.removeItem("access_token");
+		form.elements['access_token'].value = "";
+	}
 }
 
-function generateHTML(data, renderMD, showthumbnails) {
-	let count = 0;
-	let html = "";
-	let until = 2147483647;
+function search(form, until=-1) {
 	
-	data.forEach(obj => {
-		count += 1;
-		until = obj.created_utc;
-		
-		let timestamp = new Date(obj.created_utc * 1000);
-		timestamp = timestamp.toString().split(" (")[0];
-
-		html += `
-			<div class="card has-text-grey-light my-3">
-				<div class="card-content">
-					<div class="content mb-3">
-						<nav class="level">
-							<div class="level-left">
-								<div class="level-item is-block-mobile">
-									<a href="https://reddit.com/r/${obj.subreddit}" title="View subreddit on Reddit" class="has-text-danger mr-1">r/${obj.subreddit}</a>
-									·
-									<a href="https://reddit.com/user/${obj.author}" title="View user on Reddit" class="has-text-danger ml-1">u/${obj.author}</a>
-								</div>
-							</div>
-							<div class="level-right">
-								<div class="level-item is-block-mobile">
-									<p class="is-size-7">${timestamp}</p>
-								</div>
-							</div>
-						</nav>
-					</div>
-					<div class="media mb-1">
-		`;
-
-		if (showthumbnails.checked) {
-			if ("thumbnail" in obj && obj.thumbnail.endsWith(".jpg")) {
-				html += `
-						<div class="media-left">
-							<figure class="image is-96x96">
-								<a href="https://reddit.com${obj.permalink}" title="View post on Reddit">
-									<img src="${obj.thumbnail}" alt="Post Thumbnail">
-								</a>
-							</figure>
-						</div>
-				`;
-			}
-		}
-
-		html += 		`<div class="media-content">`;
-
-		if ("link_id" in obj) {  // Comment
-			let link;
-			if (obj.permalink) {
-				link = "https://reddit.com" + obj.permalink;
-			} else {
-				link = `https://reddit.com//comments/${obj.link_id.replace("t3_", "")}/-/${obj.id}`;
-			}
-			html += `
-							<p>
-								<a href="${link}" title="View comment on Reddit" class="has-text-light has-text-weight-bold">Comment Link</a> 
-								<span class="has-text-grey-light is-size-7 score">[Score: ${obj.score.toLocaleString()}]</span>
-							</p>
-						</div>
-					</div>
-					<div class="content markdown mt-3">
-						${formatText(obj.body, renderMD.checked)}
-					</div>
-			`;
-		} else {  // Post
-			html += `
-							<p>
-								<a href="https://reddit.com${obj.permalink}" title="View post on Reddit" class="has-text-light has-text-weight-bold">${obj.title}</a> 
-								<span class="has-text-grey-light is-size-7 score">[Score: ${obj.score.toLocaleString()}]</span>
-							</p>
-			`;
-			if (!obj.is_self) {  // Link Post
-				html += `
-							<p>
-								<a href="${obj.url}" title="View linked URL" class="has-text-danger">${obj.url}</a>
-							</p>
-						</div>
-					</div>
-				`;
-			} else {  // Self Post
-				html += `
-						</div>
-					</div>
-					<div class="content markdown mt-3">
-						${formatText(obj.selftext, renderMD.checked)}
-					</div>
-				`;
-			}
-		}
-
-		html += `
-				</div>
-			</div>
-		`;
-
-	});
-
-	if (count > 0) {
-		html += `
-			<button type="submit" class="button is-danger is-fullwidth my-5" 
-			id="fetch-${until}" onclick="fetchMore(${until})">Fetch More</button>
-		`;
-	}
-
-	return html;
-}
-
-function formatText(text, use_markdown) {
-	if (use_markdown) {
-		return SnuOwnd.getParser().render(text);
-	} else {
-		return text.replaceAll("\n", "<br>");
-	}
-}
-
-function getFromPS(form, until=-1) {
 	if (until == -1) { 	// Search
 		document.getElementById("searchButton").classList.add("is-loading");
 		document.getElementById("results").innerHTML = "";
@@ -297,6 +169,141 @@ function getFromPS(form, until=-1) {
 	})
 }
 
+function fetchMore(until) {
+	search(form, until);
+}
+
+function generateHTML(data, renderMD, showthumbnails) {
+	let count = 0;
+	let html = "";
+	let until = 2147483647;
+	
+	data.forEach(obj => {
+		count += 1;
+		until = obj.created_utc;
+		
+		let timestamp = new Date(obj.created_utc * 1000);
+		timestamp = timestamp.toString().split(" (")[0];
+
+		html += `
+			<div class="card has-text-grey-light my-3">
+				<div class="card-content">
+					<div class="content mb-3">
+						<nav class="level">
+							<div class="level-left">
+								<div class="level-item is-block-mobile">
+									<a href="https://reddit.com/r/${obj.subreddit}" title="View subreddit on Reddit" class="has-text-danger mr-1">r/${obj.subreddit}</a>
+									·
+									<a href="https://reddit.com/user/${obj.author}" title="View user on Reddit" class="has-text-danger ml-1">u/${obj.author}</a>
+								</div>
+							</div>
+							<div class="level-right">
+								<div class="level-item is-block-mobile">
+									<p class="is-size-7">${timestamp}</p>
+								</div>
+							</div>
+						</nav>
+					</div>
+					<div class="media mb-1">
+		`;
+
+		if (showthumbnails.checked) {
+			if ("thumbnail" in obj && obj.thumbnail.endsWith(".jpg")) {
+				html += `
+						<div class="media-left">
+							<figure class="image is-96x96">
+								<a href="https://reddit.com${obj.permalink}" title="View post on Reddit">
+									<img src="${obj.thumbnail}" alt="Post Thumbnail">
+								</a>
+							</figure>
+						</div>
+				`;
+			}
+		}
+
+		html += 		`<div class="media-content">`;
+
+		if ("link_id" in obj) {  // Comment
+			let link;
+			if (obj.permalink) {
+				link = "https://reddit.com" + obj.permalink;
+			} else {
+				link = `https://reddit.com//comments/${obj.link_id.replace("t3_", "")}/-/${obj.id}`;
+			}
+			html += `
+							<p>
+								<a href="${link}" title="View comment on Reddit" class="has-text-light has-text-weight-bold">Comment Link</a> 
+								<span class="has-text-grey-light is-size-7 score">[Score: ${obj.score.toLocaleString()}]</span>
+							</p>
+						</div>
+					</div>
+					<div class="content markdown mt-3">
+						${formatText(obj.body, renderMD.checked)}
+					</div>
+			`;
+		} else {  // Post
+			html += `
+							<p>
+								<a href="https://reddit.com${obj.permalink}" title="View post on Reddit" class="has-text-light has-text-weight-bold">${obj.title}</a> 
+								<span class="has-text-grey-light is-size-7 score">[Score: ${obj.score.toLocaleString()}]</span>
+							</p>
+			`;
+			if (!obj.is_self) {  // Link Post
+				html += `
+							<p>
+								<a href="${obj.url}" title="View linked URL" class="has-text-danger">${obj.url}</a>
+							</p>
+						</div>
+					</div>
+				`;
+			} else {  // Self Post
+				html += `
+						</div>
+					</div>
+					<div class="content markdown mt-3">
+						${formatText(obj.selftext, renderMD.checked)}
+					</div>
+				`;
+			}
+		}
+
+		html += `
+				</div>
+			</div>
+		`;
+
+	});
+
+	if (count > 0) {
+		html += `
+			<button type="submit" class="button is-danger is-fullwidth my-5" 
+			id="fetch-${until}" onclick="fetchMore(${until})">Fetch More</button>
+		`;
+	}
+
+	return html;
+}
+
+function formatText(text, use_markdown) {
+	if (use_markdown) {
+		return SnuOwnd.getParser().render(text);
+	} else {
+		return text.replaceAll("\n", "<br>");
+	}
+}
+
+async function load(url, access_token) {
+	let obj = null;
+	try {
+		let headers = { headers: { "Authorization": `Bearer ${access_token}` } };
+		obj = await fetch(url, headers);
+		obj = await obj.json();
+	} catch (e) {
+		console.log(e);
+	}
+	return obj;
+}
+
 function directExpand(button) {
 	let link = button.previousElementSibling;
 	let url = link.href;
@@ -313,9 +320,3 @@ function directExpand(button) {
 	}
 	button.classList.toggle("closed");
 }
-
-const form = document.getElementById('searchForm');
-form.addEventListener('submit', (event) => {
-	event.preventDefault();
-	getFromPS(form);
-});
