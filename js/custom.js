@@ -274,7 +274,7 @@ function generateHTML(data, renderMD, showthumbnails) {
 							</p>
 						</div>
 					</div>
-					<div class="content mt-3 markdown expand-image">
+					<div class="content mt-3 markdown expand-image wrap">
 						${formatText(obj.body, renderMD.checked)}
 					</div>
 			`;
@@ -287,7 +287,7 @@ function generateHTML(data, renderMD, showthumbnails) {
 			`;
 			if (!obj.is_self) {  // Link Post
 				html += `
-							<p class="expand-image">
+							<p class="expand-image wrap">
 								<a href="${obj.url}" title="View linked URL" class="has-text-danger">${obj.url}</a>
 							</p>
 						</div>
@@ -297,7 +297,7 @@ function generateHTML(data, renderMD, showthumbnails) {
 				html += `
 						</div>
 					</div>
-					<div class="content mt-3 markdown expand-image">
+					<div class="content mt-3 markdown expand-image wrap">
 						${formatText(obj.selftext, renderMD.checked)}
 					</div>
 				`;
