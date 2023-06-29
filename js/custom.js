@@ -348,6 +348,7 @@ function directExpand(button) {
 		let span = document.createElement("span");
 		span.style.display = "block";
 		let img = document.createElement("img");
+		url = url.replace("preview.redd.it", "i.redd.it");
 		img.src = url;
 		span.appendChild(img);
 		button.after(span);
