@@ -15,13 +15,13 @@
 				<h2 class="subtitle has-text-danger has-text-centered">Powered by Pushshift</h2>
 				<form id="searchForm">
 					<div class="field">
-						<label class="label is-uppercase has-text-grey-lighter is-size-7" for="access_token">
+						<label class="label is-uppercase has-text-grey-lighter is-size-7" for="accessToken">
 							Access Token (<a href="https://api.pushshift.io/signup" target="_blank" title="Request access token from Pushshift" class="has-text-danger">Request Token</a>)
 						</label>
 						<div class="control">
 							<div class="field has-addons">
 								<div class="control is-expanded">
-									<input id="access_token" name="access_token" type="text" class="input" placeholder="Required" required>
+									<input id="accessToken" name="accessToken" type="text" class="input" placeholder="Required" required>
 								</div>
 								<div class="control">
 									<a class="button is-danger is-outlined" onclick="clearAccessToken()" title="Clear cached access token">Clear</a>
@@ -106,7 +106,7 @@
 						<div class="field-body">
 							<div class="field">
 								<label class="checkbox has-text-grey-lighter is-size-6">
-									<input type="checkbox" id="renderMD" name="renderMD" checked>
+									<input type="checkbox" id="renderMarkdown" name="renderMarkdown" checked>
 									Render Markdown
 								</label>
 							</div>
@@ -118,7 +118,7 @@
 							</div>
 							<div class="field">
 								<label class="checkbox has-text-grey-lighter is-size-6">
-									<input type="checkbox" id="thumbnails" name="thumbnails" checked>
+									<input type="checkbox" id="showThumbnails" name="showThumbnails" checked>
 									Show Thumbnails
 								</label>
 							</div>

@@ -26,18 +26,31 @@ function loadParams() {
 		}
 	}
 	getAccessToken();
+	getSettings();
 }
 
 function getAccessToken() {
-	if (localStorage.getItem("access_token")) {
-		document.getElementById("access_token").value = localStorage.getItem("access_token");
+	if (localStorage.getItem("accessToken")) {
+		document.getElementById("accessToken").value = localStorage.getItem("accessToken");
 	}
 }
 
 function clearAccessToken() {
-	if (localStorage.getItem("access_token")) {
-		localStorage.removeItem("access_token");
-		form.elements['access_token'].value = "";
+	if (localStorage.getItem("accessToken")) {
+		localStorage.removeItem("accessToken");
+		form.elements['accessToken'].value = "";
+	}
+}
+
+function getSettings() {
+	if (localStorage.getItem("renderMarkdown")) {
+		document.getElementById("renderMarkdown").checked = (localStorage.getItem("renderMarkdown") === "true");
+	}
+	if (localStorage.getItem("highlight")) {
+		document.getElementById("highlight").checked = (localStorage.getItem("highlight") === "true");
+	}
+	if (localStorage.getItem("showThumbnails")) {
+		document.getElementById("showThumbnails").checked = (localStorage.getItem("showThumbnails") === "true");
 	}
 }
 
@@ -137,17 +150,23 @@ function search(form, until=-1) {
 	}
 
 	history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path);
-	let access_token = form.elements['access_token'].value;
-	localStorage.setItem("access_token", access_token);
+	let accessToken = form.elements['accessToken'].value;
+	localStorage.setItem("accessToken", accessToken);
+	let renderMarkdown = form.elements['renderMarkdown'].checked;
+	localStorage.setItem("renderMarkdown", renderMarkdown);
+	let highlight = form.elements['highlight'].checked;
+	localStorage.setItem("highlight", highlight);
+	let showThumbnails = form.elements['showThumbnails'].checked;
+	localStorage.setItem("showThumbnails", showThumbnails);
 
-	load(psURL, access_token).then(value => {
+	load(psURL, accessToken).then(value => {
 		try {
-			html = generateHTML(value.data, form.elements['renderMD'], form.elements['thumbnails']);
+			html = generateHTML(value.data, renderMarkdown, showThumbnails);
 			document.getElementById("results").innerHTML += html;
 
 			// Highlight search terms
 			searchTerm = form.elements['q'].value;
-			if (highlight.checked && searchTerm.length > 0) {
+			if (highlight && searchTerm.length > 0) {
 				let instance = new Mark(document.querySelector("#results"));
 				if (!searchTerm.startsWith('"')) {
 					let searchArray = searchTerm.split(" ");
@@ -211,7 +230,7 @@ function fetchMore(until) {
 	search(form, until);
 }
 
-function generateHTML(data, renderMD, showThumbnails) {
+function generateHTML(data, renderMarkdown, showThumbnails) {
 	let count = 0;
 	let html = "";
 	let until = 2147483647;
@@ -245,7 +264,7 @@ function generateHTML(data, renderMD, showThumbnails) {
 					<div class="media mb-1">
 		`;
 
-		if (showThumbnails.checked) {
+		if (showThumbnails) {
 			if ("thumbnail" in obj && obj.thumbnail.endsWith(".jpg")) {
 				html += `
 						<div class="media-left">
@@ -276,7 +295,7 @@ function generateHTML(data, renderMD, showThumbnails) {
 						</div>
 					</div>
 					<div class="content mt-3 markdown expand wrap">
-						${formatText(obj.body, renderMD.checked)}
+						${formatText(obj.body, renderMarkdown)}
 					</div>
 			`;
 		} else {  // Post
@@ -299,7 +318,7 @@ function generateHTML(data, renderMD, showThumbnails) {
 						</div>
 					</div>
 					<div class="content mt-3 markdown expand wrap">
-						${formatText(obj.selftext, renderMD.checked)}
+						${formatText(obj.selftext, renderMarkdown)}
 					</div>
 				`;
 			}
@@ -340,10 +359,10 @@ function formatText(text, use_markdown) {
 	}
 }
 
-async function load(url, access_token) {
+async function load(url, accessToken) {
 	let obj = null;
 	try {
-		let headers = { headers: { "Authorization": `Bearer ${access_token}` } };
+		let headers = { headers: { "Authorization": `Bearer ${accessToken}` } };
 		obj = await fetch(url, headers);
 		obj = await obj.json();
 	} catch (e) {
