@@ -43,13 +43,13 @@ function clearAccessToken() {
 
 function search(form, until=-1) {
 	
-	if (until == -1) { 	// Search
-		document.getElementById("searchButton").classList.add("is-loading");
+	if (until == -1) {	// New Search
 		document.getElementById("results").innerHTML = "";
-	} else { 			// Fetch More
+	} else {			// Fetch More
 		document.getElementById("fetch-"+until).classList.add("is-loading");
 	}
 
+	let min_score, max_score, since;
 	let psURL;
 	let path = "?";
 	if (form.elements['kind'].value == "submission") {
@@ -68,12 +68,28 @@ function search(form, until=-1) {
 		path  += "&subreddit=" + form.elements['subreddit'].value;
 	}
 	if (form.elements['min_score'].value != '') {
-		psURL += "&min_score=" + form.elements['min_score'].value;
-		path  += "&min_score=" + form.elements['min_score'].value;
+		min_score = form.elements['min_score'].value;
+		if (isNaN(min_score) || min_score % 1 !== 0) {
+			document.getElementById("apiInfo").innerHTML = "'Min Score' must be an integer";
+			return;
+		}
+		psURL += "&min_score=" + min_score;
+		path  += "&min_score=" + min_score;
 	}
 	if (form.elements['max_score'].value != '') {
-		psURL += "&max_score=" + form.elements['max_score'].value;
-		path  += "&max_score=" + form.elements['max_score'].value;
+		max_score = form.elements['max_score'].value;
+		if (isNaN(max_score) || max_score % 1 !== 0) {
+			document.getElementById("apiInfo").innerHTML = "'Max Score' must be an integer";
+			return;
+		}
+		psURL += "&max_score=" + max_score;
+		path  += "&max_score=" + max_score;
+	}
+	if (min_score && max_score) {
+		if (max_score < min_score) {
+			document.getElementById("apiInfo").innerHTML = "'Max Score' must be greater than 'Min Score'";
+			return;
+		}
 	}
 	if (form.elements['since'].value != '') {
 		since = new Date(form.elements['since'].value).valueOf() / 1000;
@@ -84,6 +100,12 @@ function search(form, until=-1) {
 		psURL += "&until=" + until;
 	} else if (form.elements['until'].value != '') {
 		until = new Date(form.elements['until'].value).valueOf() / 1000;
+		if (since) {
+			if (until < since) {
+				document.getElementById("apiInfo").innerHTML = "'Until' must be after 'Since'";
+				return;
+			}
+		}
 		psURL += "&until=" + until;
 		path  += "&until=" + until;
 	}
@@ -95,10 +117,25 @@ function search(form, until=-1) {
 		psURL += "&limit=100";
 		path  += "&limit=100";
 	} else {
-		psURL += "&limit=" + form.elements['limit'].value;
-		path  += "&limit=" + form.elements['limit'].value;
+		let limit = form.elements['limit'].value;
+		if (isNaN(limit) || limit % 1 !== 0) {
+			document.getElementById("apiInfo").innerHTML = "'Number to Request' must be an integer";
+			return;
+		} else if (limit < 1) {
+			document.getElementById("apiInfo").innerHTML = "'Number to Request' must be a positive integer";
+			return;
+		} else if (limit > 1000) {
+			document.getElementById("apiInfo").innerHTML = "'Number to Request' must be less than 1000";
+			return;
+		}
+		psURL += "&limit=" + limit;
+		path  += "&limit=" + limit;
 	}
 	
+	if (until == -1) {	// Search
+		document.getElementById("searchButton").classList.add("is-loading");
+	}
+
 	history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path);
 	let access_token = form.elements['access_token'].value;
 	localStorage.setItem("access_token", access_token);
@@ -128,7 +165,7 @@ function search(form, until=-1) {
 			}
 
 			document.getElementById("apiInfo").innerHTML = `
-				${value.data.length} Results - <a href='${psURL}' target='_blank' 
+				${value.data.length} Result${value.data.length == 1 ? "" : "s"} - <a href='${psURL}' target='_blank' 
 				title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
 			`;
 			document.getElementById("searchButton").classList.remove("is-loading");
