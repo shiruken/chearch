@@ -182,7 +182,7 @@ function search(form, until=-1) {
 					if (extensions.some(extension => url.includes(extension))) {
 						let button = document.createElement("button");
 						button.classList.add("delete", "closed");
-						button.setAttribute("onclick", "directExpand(this);");
+						button.setAttribute("onclick", "directExpand(this)");
 						link.after(button);
 					}
 				}
@@ -211,7 +211,7 @@ function fetchMore(until) {
 	search(form, until);
 }
 
-function generateHTML(data, renderMD, showthumbnails) {
+function generateHTML(data, renderMD, showThumbnails) {
 	let count = 0;
 	let html = "";
 	let until = 2147483647;
@@ -245,13 +245,13 @@ function generateHTML(data, renderMD, showthumbnails) {
 					<div class="media mb-1">
 		`;
 
-		if (showthumbnails.checked) {
+		if (showThumbnails.checked) {
 			if ("thumbnail" in obj && obj.thumbnail.endsWith(".jpg")) {
 				html += `
 						<div class="media-left">
 							<figure class="image is-96x96">
 								<a href="https://reddit.com${obj.permalink}" title="View post on Reddit">
-									<img src="${obj.thumbnail}" alt="Thumbnail" onerror="this.closest('.media-left').style.display = 'none';">
+									<img src="${obj.thumbnail}" alt="Thumbnail" onerror="hideThumbnail(this)">
 								</a>
 							</figure>
 						</div>
@@ -382,4 +382,9 @@ function directExpand(button) {
 		span.remove();
 	}
 	button.classList.toggle("closed");
+}
+
+function hideThumbnail(element) {
+	let thumbnail = element.closest('.media-left');
+	thumbnail.style.display = 'none';
 }
