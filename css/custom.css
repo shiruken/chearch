@@ -13,8 +13,8 @@
 	height: 96px;
 	object-fit: cover;
 }
-.markdown, .markdown strong, .markdown h1, .markdown h2, 
-.markdown table thead tr th {
+.markdown, .markdown strong, .markdown h1, .markdown h2,
+.markdown h3, .markdown code, .markdown table thead tr th {
 	color: #F5F5F5; /* .has-text-light */
 }
 .markdown a, .markdown a strong {
@@ -23,16 +23,19 @@
 .markdown a:hover, .markdown a:hover strong {
 	color: #EE1742; /* .has-text-danger:hover */
 }
+.markdown code, .markdown pre {
+	background-color: #4A4A4A; /* .has-background-grey-dark */
+}
 span.score {
 	white-space: nowrap;
 }
 .delete, .delete:focus {
-	background-color: #F14668; /* .is-danger */
+	background-color: #F14668; /* .has-background-danger */
 	margin-left: 3px;
 	vertical-align: super;
 }
 .delete:hover {
-	background-color: #EE1742; /* .is-danger:hover */
+	background-color: #EE1742; /* .has-background-danger:hover */
 }
 .closed {
 	transform: rotate(45deg);
