@@ -178,7 +178,8 @@ function search(form, until=-1) {
 			for (let link of links) {
 				if (link.nextElementSibling == null || link.nextElementSibling.tagName != "BUTTON") {
 					let url = link.href;
-					if (url.includes(".jpg") || url.includes(".png") || url.includes(".gif") || url.includes(".mp4")) {
+					let extensions = [".jpg", ".jpeg", ".png", ".gif", ".gifv", ".mp4"];
+					if (extensions.some(extension => url.includes(extension))) {
 						let button = document.createElement("button");
 						button.classList.add("delete", "closed");
 						button.setAttribute("onclick", "directExpand(this);");
