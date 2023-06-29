@@ -250,7 +250,7 @@ function generateHTML(data, renderMD, showthumbnails) {
 						<div class="media-left">
 							<figure class="image is-96x96">
 								<a href="https://reddit.com${obj.permalink}" title="View post on Reddit">
-									<img src="${obj.thumbnail}" alt="Post Thumbnail">
+									<img src="${obj.thumbnail}" alt="Thumbnail" onerror="this.closest('.media-left').style.display = 'none';">
 								</a>
 							</figure>
 						</div>
