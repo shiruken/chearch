@@ -173,12 +173,12 @@ function search(form, until=-1) {
 				document.getElementById("fetch-" + until).remove();
 			} catch {}
 
-			// Inject buttons for expanding linked images
-			let links = document.querySelectorAll(".expand-image a");
+			// Inject buttons for expanding linked media
+			let links = document.querySelectorAll(".expand a");
 			for (let link of links) {
 				if (link.nextElementSibling == null || link.nextElementSibling.tagName != "BUTTON") {
 					let url = link.href;
-					if (url.includes(".jpg") || url.includes(".png") || url.includes(".gif")) {
+					if (url.includes(".jpg") || url.includes(".png") || url.includes(".gif") || url.includes(".mp4")) {
 						let button = document.createElement("button");
 						button.classList.add("delete", "closed");
 						button.setAttribute("onclick", "directExpand(this);");
@@ -274,7 +274,7 @@ function generateHTML(data, renderMD, showthumbnails) {
 							</p>
 						</div>
 					</div>
-					<div class="content mt-3 markdown expand-image wrap">
+					<div class="content mt-3 markdown expand wrap">
 						${formatText(obj.body, renderMD.checked)}
 					</div>
 			`;
@@ -287,7 +287,7 @@ function generateHTML(data, renderMD, showthumbnails) {
 			`;
 			if (!obj.is_self) {  // Link Post
 				html += `
-							<p class="expand-image wrap">
+							<p class="expand wrap">
 								<a href="${obj.url}" title="View linked URL" class="has-text-danger">${obj.url}</a>
 							</p>
 						</div>
@@ -297,7 +297,7 @@ function generateHTML(data, renderMD, showthumbnails) {
 				html += `
 						</div>
 					</div>
-					<div class="content mt-3 markdown expand-image wrap">
+					<div class="content mt-3 markdown expand wrap">
 						${formatText(obj.selftext, renderMD.checked)}
 					</div>
 				`;
@@ -347,10 +347,24 @@ function directExpand(button) {
 	if (button.classList.contains("closed")) {
 		let span = document.createElement("span");
 		span.style.display = "block";
-		let img = document.createElement("img");
-		url = url.replace("preview.redd.it", "i.redd.it");
-		img.src = url;
-		span.appendChild(img);
+		if (url.includes(".gifv") || url.includes(".mp4")) { // Video
+			url = url.replace("gifv", "mp4");
+			let video = document.createElement("video");
+			video.controls = true;
+			video.autoplay = true;
+			video.loop = true;
+			video.muted = true;
+			let source = document.createElement("source");
+			source.src = url;
+			source.type = "video/mp4";
+			video.appendChild(source);
+			span.appendChild(video);
+		} else { // Image
+			url = url.replace("preview.redd.it", "i.redd.it");
+			let img = document.createElement("img");
+			img.src = url;
+			span.appendChild(img);
+		}
 		button.after(span);
 	} else {
 		let span = button.nextElementSibling;
