@@ -323,7 +323,17 @@ function generateHTML(data, renderMD, showthumbnails) {
 
 function formatText(text, use_markdown) {
 	if (use_markdown) {
-		return SnuOwnd.getParser().render(text);
+		text = SnuOwnd.getParser().render(text);
+
+		// Link native Giphy embeds
+		const regex = /!\[gif\]\(giphy\|(\w+)[\|\w]*\)/g;
+		const matches = text.matchAll(regex);
+		for (const match of matches) {
+			let link = `<a href="https://media.giphy.com/media/${match[1]}/giphy.gif">${match[0]}</a>`
+			text = text.replace(match[0], link);
+		}
+
+		return text;
 	} else {
 		return text.replaceAll("\n", "<br>");
 	}
