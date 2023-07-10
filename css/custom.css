@@ -51,6 +51,9 @@ span.score {
 		width: 48px;
 		height: 48px;
 	}
+	footer {
+		font-size: 0.75em;
+	}
 }
 /* Fix for equalizing select input width in horizontal form */
 @media screen and (min-width: 769px) {
