@@ -334,7 +334,7 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
 	if (count > 0) {
 		html += `
 			<button type="submit" class="button is-danger is-fullwidth my-5" 
-			id="fetch-${until}" onclick="fetchMore(${until})">Fetch More</button>
+			id="fetch-${until}" data-umami-event="more-button" onclick="fetchMore(${until})">Fetch More</button>
 		`;
 	}
 
