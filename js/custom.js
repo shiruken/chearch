@@ -73,7 +73,7 @@ function search(form, until=-1) {
 		path += "kind=comment";
 	}
 	if (form.elements['author'].value != '') {
-		psURL += "&author=" + form.elements['author'].value;
+		psURL += "&author=" + form.elements['author'].value + "&exact_author=true";
 		path  += "&author=" + form.elements['author'].value;
 	}
 	if (form.elements['subreddit'].value != '') {
