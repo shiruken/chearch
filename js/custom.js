@@ -278,7 +278,7 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
             }
         }
 
-        html += 		`<div class="media-content">`;
+        html +=         `<div class="media-content">`;
 
         if ("link_id" in obj) {  // Comment
             let link;
