@@ -1,67 +1,67 @@
 .card {
-	background-color: #1A202C;
-	box-shadow: none;
+    background-color: #1A202C;
+    box-shadow: none;
 }
 .card-content {
-	padding: 0.75rem 1rem;
+    padding: 0.75rem 1rem;
 }
 .wrap {
-	overflow-wrap: break-word;
-	word-break: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 .image img {
-	width: 96px;
-	height: 96px;
-	object-fit: cover;
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
 }
 .markdown, .markdown strong, .markdown h1, .markdown h2,
 .markdown h3, .markdown code, .markdown table thead tr th {
-	color: #F5F5F5; /* .has-text-light */
+    color: #F5F5F5; /* .has-text-light */
 }
 .markdown a, .markdown a strong {
-	color: #F14668; /* .has-text-danger */
+    color: #F14668; /* .has-text-danger */
 }
 .markdown a:hover, .markdown a:hover strong {
-	color: #EE1742; /* .has-text-danger:hover */
+    color: #EE1742; /* .has-text-danger:hover */
 }
 .markdown code, .markdown pre {
-	background-color: #4A4A4A; /* .has-background-grey-dark */
+    background-color: #4A4A4A; /* .has-background-grey-dark */
 }
 span.score {
-	white-space: nowrap;
+    white-space: nowrap;
 }
 .delete, .delete:focus {
-	background-color: #F14668; /* .has-background-danger */
-	margin-left: 3px;
-	vertical-align: super;
+    background-color: #F14668; /* .has-background-danger */
+    margin-left: 3px;
+    vertical-align: super;
 }
 .delete:hover {
-	background-color: #EE1742; /* .has-background-danger:hover */
+    background-color: #EE1742; /* .has-background-danger:hover */
 }
 .closed {
-	transform: rotate(45deg);
+    transform: rotate(45deg);
 }
 @media screen and (max-width: 768px) {
-	/* Reduce spacing between level items on mobile */
-	.level-left + .level-right {
-		margin-top: 0rem;
-	}
-	/* Reduce size of thumbnails on mobile */
-	figure.image.is-96x96, .image img {
-		width: 48px;
-		height: 48px;
-	}
-	footer {
-		font-size: 0.75em;
-	}
+    /* Reduce spacing between level items on mobile */
+    .level-left + .level-right {
+        margin-top: 0rem;
+    }
+    /* Reduce size of thumbnails on mobile */
+    figure.image.is-96x96, .image img {
+        width: 48px;
+        height: 48px;
+    }
+    footer {
+        font-size: 0.75em;
+    }
 }
 /* Fix for equalizing select input width in horizontal form */
 @media screen and (min-width: 769px) {
-	.field-body > .field:not(.is-narrow) {
-		box-flex: 1;
-		flex-grow: 1;
-	}
-	.field-body>.field {
-		flex: 1;
-	}
+    .field-body > .field:not(.is-narrow) {
+        box-flex: 1;
+        flex-grow: 1;
+    }
+    .field-body>.field {
+        flex: 1;
+    }
 }

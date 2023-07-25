@@ -1,157 +1,157 @@
 <!DOCTYPE html>
 <html lang="en" class="has-background-black-bis">
-	<head>
-		<meta charset="utf-8">
-		<title>Reddit Search</title>
-		<meta name="description" content="Reddit search powered by Pushshift">
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<link rel="stylesheet" href="css/bulma.min.css">
-		<link rel="stylesheet" href="css/custom.css">
-	</head>
-	<body>
-		<section class="section pb-3">
-			<div class="container is-max-desktop">
-				<h1 class="title has-text-danger has-text-centered">Reddit Search</h1>
-				<h2 class="subtitle has-text-danger has-text-centered">Powered by Pushshift</h2>
-				<form id="searchForm">
-					<div class="field">
-						<label class="label is-uppercase has-text-grey-lighter is-size-7" for="accessToken">
-							Access Token (<a href="https://api.pushshift.io/signup" target="_blank" title="Request access token from Pushshift" class="has-text-danger">Request Token</a>)
-						</label>
-						<div class="control">
-							<div class="field has-addons">
-								<div class="control is-expanded">
-									<input id="accessToken" name="accessToken" type="text" class="input" placeholder="Required" required>
-								</div>
-								<div class="control">
-									<a class="button is-danger is-outlined" onclick="clearAccessToken()" title="Clear cached access token">Clear</a>
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="field is-horizontal">
-						<div class="field-body">
-							<div class="field">
-								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="author">Username</label>
-								<div class="control">
-									<input id="author" name="author" type="text" class="input">
-								</div>
-							</div>
-							<div class="field">
-								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="subreddit">Subreddit</label>
-								<div class="control">
-									<input id="subreddit" name="subreddit" type="text" class="input">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="field is-horizontal">
-						<div class="field-body">
-							<div class="field">
-								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="kind">Search For</label>
-								<div class="control">
-									<div class="select is-fullwidth">
-										<select id="kind" name="kind">
-											<option value="submission">Posts</option>
-											<option value="comment">Comments</option>
-										</select>
-									</div>
-								</div>
-							</div>
-							<div class="field">
-								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="limit">Number To Request</label>
-								<div class="control">
-									<input id="limit" name="limit" type="text" placeholder="100" class="input">
-								</div>
-							</div>
-							<div class="field">
-								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="min_score">Min Score</label>
-								<div class="control">
-									<input id="min_score" name="min_score" type="text" class="input">
-								</div>
-							</div>
-							<div class="field">
-								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="max_score">Max Score</label>
-								<div class="control">
-									<input id="max_score" name="max_score" type="text" class="input">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="field is-horizontal">
-						<div class="field-body">
-							<div class="field">
-								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="since">Since</label>
-								<div class="control">
-									<input id="since" name="since" type="datetime-local" class="input">
-								</div>
-							</div>
-							<div class="field">
-								<label class="label is-uppercase has-text-grey-lighter is-size-7" for="until">Until</label>
-								<div class="control">
-									<input id="until" name="until" type="datetime-local" class="input">
-								</div>
-							</div>
-						</div>
-					</div>
-					<div class="field">
-						<div class="field">
-							<label class="label is-uppercase has-text-grey-lighter is-size-7" for="q">Search Input</label>
-							<div class="control">
-								<input id="q" name="q" type="text" class="input">
-							</div>
-						</div>
-					</div>
-					<div class="field my-3">
-						<div class="field-body">
-							<div class="field">
-								<label class="checkbox has-text-grey-lighter is-size-6">
-									<input type="checkbox" id="renderMarkdown" name="renderMarkdown" checked>
-									Render Markdown
-								</label>
-							</div>
-							<div class="field">
-								<label class="checkbox has-text-grey-lighter is-size-6">
-									<input type="checkbox" id="highlight" name="highlight" checked>
-									Highlight Search Term(s)
-								</label>
-							</div>
-							<div class="field">
-								<label class="checkbox has-text-grey-lighter is-size-6">
-									<input type="checkbox" id="showThumbnails" name="showThumbnails" checked>
-									Show Thumbnails
-								</label>
-							</div>
-						</div>
-					</div>
-					<div class="field my-3">
-						<div class="control is-expanded">
-							<button type="submit" class="button is-danger is-fullwidth" id="searchButton">Search</button>
-						</div>
-					</div>
-				</form>
-				<div id="apiInfo" class="has-text-centered has-text-grey-lighter my-3">
-					<noscript>
-						Javascript is required
-					</noscript>
-				</div>
-				<div id="results"></div>
-			</div>
-		</section>
-		<footer class="footer has-background-black-bis has-text-grey py-3">
-			<div class="content has-text-centered">
-				<p>
-					<a href="https://github.com/shiruken/chearch" title="View source code on GitHub" class="has-text-danger">Source Code</a>
-					·
-					Based on <a href="https://github.com/adhesivecheese/chearch" title="View GitHub repository for Chearch" class="has-text-danger">Chearch</a>
-					·
-					Powered by <a href="https://api.pushshift.io/signup" title="View Pushshift website" class="has-text-danger">Pushshift</a>
-				</p>
-			</div>
-		</footer>
-		<script src="js/snuownd.js"></script>
-		<script src="js/mark.es6.min.js"></script>
-		<script src="js/custom.js"></script>
-		<script async defer src="https://u.reddit.science/u.js" data-website-id="834cfa6e-596d-4998-91c3-5963f6e24dc5" data-domains="shiruken.github.io"></script>
-	</body>
+    <head>
+        <meta charset="utf-8">
+        <title>Reddit Search</title>
+        <meta name="description" content="Reddit search powered by Pushshift">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="css/bulma.min.css">
+        <link rel="stylesheet" href="css/custom.css">
+    </head>
+    <body>
+        <section class="section pb-3">
+            <div class="container is-max-desktop">
+                <h1 class="title has-text-danger has-text-centered">Reddit Search</h1>
+                <h2 class="subtitle has-text-danger has-text-centered">Powered by Pushshift</h2>
+                <form id="searchForm">
+                    <div class="field">
+                        <label class="label is-uppercase has-text-grey-lighter is-size-7" for="accessToken">
+                            Access Token (<a href="https://api.pushshift.io/signup" target="_blank" title="Request access token from Pushshift" class="has-text-danger">Request Token</a>)
+                        </label>
+                        <div class="control">
+                            <div class="field has-addons">
+                                <div class="control is-expanded">
+                                    <input id="accessToken" name="accessToken" type="text" class="input" placeholder="Required" required>
+                                </div>
+                                <div class="control">
+                                    <a class="button is-danger is-outlined" onclick="clearAccessToken()" title="Clear cached access token">Clear</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-body">
+                            <div class="field">
+                                <label class="label is-uppercase has-text-grey-lighter is-size-7" for="author">Username</label>
+                                <div class="control">
+                                    <input id="author" name="author" type="text" class="input">
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="label is-uppercase has-text-grey-lighter is-size-7" for="subreddit">Subreddit</label>
+                                <div class="control">
+                                    <input id="subreddit" name="subreddit" type="text" class="input">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-body">
+                            <div class="field">
+                                <label class="label is-uppercase has-text-grey-lighter is-size-7" for="kind">Search For</label>
+                                <div class="control">
+                                    <div class="select is-fullwidth">
+                                        <select id="kind" name="kind">
+                                            <option value="submission">Posts</option>
+                                            <option value="comment">Comments</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="label is-uppercase has-text-grey-lighter is-size-7" for="limit">Number To Request</label>
+                                <div class="control">
+                                    <input id="limit" name="limit" type="text" placeholder="100" class="input">
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="label is-uppercase has-text-grey-lighter is-size-7" for="min_score">Min Score</label>
+                                <div class="control">
+                                    <input id="min_score" name="min_score" type="text" class="input">
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="label is-uppercase has-text-grey-lighter is-size-7" for="max_score">Max Score</label>
+                                <div class="control">
+                                    <input id="max_score" name="max_score" type="text" class="input">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field is-horizontal">
+                        <div class="field-body">
+                            <div class="field">
+                                <label class="label is-uppercase has-text-grey-lighter is-size-7" for="since">Since</label>
+                                <div class="control">
+                                    <input id="since" name="since" type="datetime-local" class="input">
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="label is-uppercase has-text-grey-lighter is-size-7" for="until">Until</label>
+                                <div class="control">
+                                    <input id="until" name="until" type="datetime-local" class="input">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <div class="field">
+                            <label class="label is-uppercase has-text-grey-lighter is-size-7" for="q">Search Input</label>
+                            <div class="control">
+                                <input id="q" name="q" type="text" class="input">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field my-3">
+                        <div class="field-body">
+                            <div class="field">
+                                <label class="checkbox has-text-grey-lighter is-size-6">
+                                    <input type="checkbox" id="renderMarkdown" name="renderMarkdown" checked>
+                                    Render Markdown
+                                </label>
+                            </div>
+                            <div class="field">
+                                <label class="checkbox has-text-grey-lighter is-size-6">
+                                    <input type="checkbox" id="highlight" name="highlight" checked>
+                                    Highlight Search Term(s)
+                                </label>
+                            </div>
+                            <div class="field">
+                                <label class="checkbox has-text-grey-lighter is-size-6">
+                                    <input type="checkbox" id="showThumbnails" name="showThumbnails" checked>
+                                    Show Thumbnails
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="field my-3">
+                        <div class="control is-expanded">
+                            <button type="submit" class="button is-danger is-fullwidth" id="searchButton">Search</button>
+                        </div>
+                    </div>
+                </form>
+                <div id="apiInfo" class="has-text-centered has-text-grey-lighter my-3">
+                    <noscript>
+                        Javascript is required
+                    </noscript>
+                </div>
+                <div id="results"></div>
+            </div>
+        </section>
+        <footer class="footer has-background-black-bis has-text-grey py-3">
+            <div class="content has-text-centered">
+                <p>
+                    <a href="https://github.com/shiruken/chearch" title="View source code on GitHub" class="has-text-danger">Source Code</a>
+                    ·
+                    Based on <a href="https://github.com/adhesivecheese/chearch" title="View GitHub repository for Chearch" class="has-text-danger">Chearch</a>
+                    ·
+                    Powered by <a href="https://api.pushshift.io/signup" title="View Pushshift website" class="has-text-danger">Pushshift</a>
+                </p>
+            </div>
+        </footer>
+        <script src="js/snuownd.js"></script>
+        <script src="js/mark.es6.min.js"></script>
+        <script src="js/custom.js"></script>
+        <script async defer src="https://u.reddit.science/u.js" data-website-id="834cfa6e-596d-4998-91c3-5963f6e24dc5" data-domains="shiruken.github.io"></script>
+    </body>
 </html>
