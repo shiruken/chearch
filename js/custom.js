@@ -209,10 +209,17 @@ function search(form, until=-1) {
 
         } catch (e) {
             console.log(e);
-            if (JSON.parse(value.detail).detail == "Access token is invalid or malformed.") {
+            json = JSON.parse(value.detail);
+            if (json.detail == "Access token is invalid or malformed.") {
                 clearAccessToken();
                 document.getElementById("apiInfo").innerHTML = `
-                    Invalid or Expired Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
+                    Invalid or Malformed Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
+                    title="Request access token from Pushshift" class="has-text-danger">Request Token</a>
+                `;
+            } else if (json.detail == "Access token is revoked. This was done either manually or by reautheticating.") {
+                clearAccessToken();
+                document.getElementById("apiInfo").innerHTML = `
+                    Revoked Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
                     title="Request access token from Pushshift" class="has-text-danger">Request New Token</a>
                 `;
             } else {
