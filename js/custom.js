@@ -209,10 +209,10 @@ function search(form, until=-1) {
 
         } catch (e) {
             console.log(e);
-            if (value.detail == "Invalid token or expired token.") {
+            if (JSON.parse(value.detail).detail == "Access token is invalid or malformed.") {
                 clearAccessToken();
                 document.getElementById("apiInfo").innerHTML = `
-                    Invalid or Expired Token - <a href="https://api.pushshift.io/signup" target="_blank"
+                    Invalid or Expired Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
                     title="Request access token from Pushshift" class="has-text-danger">Request New Token</a>
                 `;
             } else {
