@@ -159,9 +159,51 @@ function search(form, until=-1) {
     let showThumbnails = form.elements['showThumbnails'].checked;
     localStorage.setItem("showThumbnails", showThumbnails);
 
-    load(psURL, accessToken).then(value => {
+    load(psURL, accessToken).then(json => {
+
+        if ("detail" in json) {
+            const detail = JSON.parse(json.detail).detail; // API response is malformed
+            console.log(detail);
+
+            if (detail == "Access token is invalid or malformed.") {
+                clearAccessToken();
+                document.getElementById("apiInfo").innerHTML = `
+                    Invalid Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
+                    title="Request access token from Pushshift" class="has-text-danger">Request Token</a>
+                `;
+            } else if (detail == "Access token is revoked. This was done either manually or by reautheticating.") {
+                clearAccessToken();
+                document.getElementById("apiInfo").innerHTML = `
+                    Revoked Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
+                    title="Request new access token from Pushshift" class="has-text-danger">Request New Token</a>
+                `;
+            } else if (detail == "Access token is expired.") {
+                refreshToken(accessToken).then(token => {
+                    if (token == null) {
+                        clearAccessToken();
+                        document.getElementById("apiInfo").innerHTML = `
+                            Error Refreshing Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
+                            title="Request new access token from Pushshift" class="has-text-danger">Request New Token</a>
+                        `;
+                    } else {
+                        document.getElementById("accessToken").value = token;
+                        search(form);
+                        return;
+                    }
+                });
+            } else {
+                document.getElementById("apiInfo").innerHTML = `
+                    Search Error: Pushshift May Be Down - <a href='${psURL}' target='_blank'
+                    title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
+                `;
+            }
+
+            document.getElementById("searchButton").classList.remove("is-loading");            
+            return;
+        }
+
         try {
-            html = generateHTML(value.data, renderMarkdown, showThumbnails);
+            html = generateHTML(json.data, renderMarkdown, showThumbnails);
             document.getElementById("results").innerHTML += html;
 
             // Highlight search terms
@@ -184,7 +226,7 @@ function search(form, until=-1) {
             }
 
             document.getElementById("apiInfo").innerHTML = `
-                ${value.data.length} Result${value.data.length == 1 ? "" : "s"} - <a href='${psURL}' target='_blank' 
+                ${json.data.length} Result${json.data.length == 1 ? "" : "s"} - <a href='${psURL}' target='_blank' 
                 title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
             `;
             document.getElementById("searchButton").classList.remove("is-loading");
@@ -209,25 +251,10 @@ function search(form, until=-1) {
 
         } catch (e) {
             console.log(e);
-            json = JSON.parse(value.detail);
-            if (json.detail == "Access token is invalid or malformed.") {
-                clearAccessToken();
-                document.getElementById("apiInfo").innerHTML = `
-                    Invalid or Malformed Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
-                    title="Request access token from Pushshift" class="has-text-danger">Request Token</a>
-                `;
-            } else if (json.detail == "Access token is revoked. This was done either manually or by reautheticating.") {
-                clearAccessToken();
-                document.getElementById("apiInfo").innerHTML = `
-                    Revoked Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
-                    title="Request access token from Pushshift" class="has-text-danger">Request New Token</a>
-                `;
-            } else {
-                 document.getElementById("apiInfo").innerHTML = `
-                    Search Error: Pushshift may be down - <a href='${psURL}' target='_blank'
-                    title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
-                `;
-            }
+            document.getElementById("apiInfo").innerHTML = `
+                Search Error: Pushshift May Be Down - <a href='${psURL}' target='_blank'
+                title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
+            `;
             document.getElementById("searchButton").classList.remove("is-loading");
         }
     })
@@ -376,6 +403,23 @@ async function load(url, accessToken) {
         console.log(e);
     }
     return obj;
+}
+
+async function refreshToken(accessToken) {
+    const url = "https://auth.pushshift.io/refresh?access_token=" + accessToken;
+    let newToken = null;
+    try {
+        const response = await fetch(url, { method: "POST" });
+        const json = await response.json();
+        if (response.ok) {
+            newToken = json.access_token;
+        } else {
+            console.log(`HTTP ${response.status}: ${json.detail}`);
+        }
+    } catch(e) {
+        console.log(e);
+    }
+    return newToken;
 }
 
 function directExpand(button) {
