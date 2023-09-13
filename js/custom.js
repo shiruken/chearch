@@ -180,12 +180,14 @@ function search(form, until=-1) {
             } else if (detail == "Access token is expired.") {
                 refreshToken(accessToken).then(token => {
                     if (token == null) {
+                        umami.track('refresh-fail');
                         clearAccessToken();
                         document.getElementById("apiInfo").innerHTML = `
                             Error Refreshing Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
                             title="Request new access token from Pushshift" class="has-text-danger">Request New Token</a>
                         `;
                     } else {
+                        umami.track('refresh-success');
                         document.getElementById("accessToken").value = token;
                         search(form);
                         return;
