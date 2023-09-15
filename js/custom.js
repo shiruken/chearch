@@ -56,9 +56,12 @@ function getSettings() {
 
 function search(form, until=-1) {
     
-    if (until == -1) {	// New Search
+    if (until < 0) {    // New Search
         document.getElementById("results").innerHTML = "";
-    } else {			// Fetch More
+        if (until == -1) {
+            document.getElementById("apiInfo").innerHTML = "";
+        }
+    } else {            // Fetch More
         document.getElementById("fetch-"+until).classList.add("is-loading");
     }
 
@@ -109,7 +112,7 @@ function search(form, until=-1) {
         psURL += "&since=" + since;
         path  += "&since=" + since;
     }
-    if (until != -1) {
+    if (until >= 0) {
         psURL += "&until=" + until;
     } else if (form.elements['until'].value != '') {
         until = new Date(form.elements['until'].value).valueOf() / 1000;
@@ -178,6 +181,7 @@ function search(form, until=-1) {
                     title="Request new access token from Pushshift" class="has-text-danger">Request New Token</a>
                 `;
             } else if (detail == "Access token is expired.") {
+                document.getElementById("apiInfo").innerHTML = "Refreshing Token";
                 refreshToken(accessToken).then(token => {
                     if (token == null) {
                         umami.track('refresh-fail');
@@ -189,7 +193,7 @@ function search(form, until=-1) {
                     } else {
                         umami.track('refresh-success');
                         document.getElementById("accessToken").value = token;
-                        search(form);
+                        search(form, -2);
                         return;
                     }
                 });
@@ -228,6 +232,7 @@ function search(form, until=-1) {
             }
 
             document.getElementById("apiInfo").innerHTML = `
+                ${until == -2 ? "<span class='has-text-weight-bold'>Token Refreshed</span> - " : ""}
                 ${json.data.length} Result${json.data.length == 1 ? "" : "s"} - <a href='${psURL}' target='_blank' 
                 title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
             `;
