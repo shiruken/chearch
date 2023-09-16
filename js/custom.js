@@ -181,7 +181,7 @@ function search(form, until=-1) {
                     title="Request new access token from Pushshift" class="has-text-danger">Request New Token</a>
                 `;
             } else if (detail == "Access token is expired.") {
-                document.getElementById("apiInfo").innerHTML = "Refreshing Token";
+                document.getElementById("apiInfo").innerHTML = "Refreshing Token...";
                 refreshToken(accessToken).then(token => {
                     if (token == null) {
                         umami.track('refresh-fail');
