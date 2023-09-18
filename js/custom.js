@@ -169,12 +169,14 @@ function search(form, until=-1) {
             console.log(detail);
 
             if (detail == "Access token is invalid or malformed.") {
+                umami.track('token-invalid');
                 clearAccessToken();
                 document.getElementById("apiInfo").innerHTML = `
                     Invalid Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
                     title="Request access token from Pushshift" class="has-text-danger">Request Token</a>
                 `;
             } else if (detail == "Access token is revoked. This was done either manually or by reautheticating.") {
+                umami.track('token-revoked');
                 clearAccessToken();
                 document.getElementById("apiInfo").innerHTML = `
                     Revoked Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
@@ -198,6 +200,7 @@ function search(form, until=-1) {
                     }
                 });
             } else {
+                umami.track('error-request');
                 document.getElementById("apiInfo").innerHTML = `
                     Search Error: Pushshift May Be Down - <a href='${psURL}' target='_blank'
                     title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
@@ -258,6 +261,7 @@ function search(form, until=-1) {
 
         } catch (e) {
             console.log(e);
+            umami.track('error-response');
             document.getElementById("apiInfo").innerHTML = `
                 Search Error: Pushshift May Be Down - <a href='${psURL}' target='_blank'
                 title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
