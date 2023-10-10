@@ -153,7 +153,7 @@ function search(form, until=-1) {
     }
 
     history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path);
-    let accessToken = form.elements['accessToken'].value;
+    let accessToken = parseAccessTokenInput();
     localStorage.setItem("accessToken", accessToken);
     let renderMarkdown = form.elements['renderMarkdown'].checked;
     localStorage.setItem("renderMarkdown", renderMarkdown);
@@ -431,6 +431,32 @@ async function refreshToken(accessToken) {
         console.log(e);
     }
     return newToken;
+}
+
+function parseAccessTokenInput() {
+    const text = form.elements['accessToken'].value;
+
+    let accessToken;
+    try {
+        let json = JSON.parse(text);
+        const type = Object.prototype.toString.call(json);
+        if (type !== '[object Object]') {
+            throw new Error("Not valid JSON object");
+        }
+        if (!('access_token' in json)) {
+            throw new Error("'access_token' missing from JSON");
+        }
+        accessToken = json['access_token'];
+    } catch {
+        accessToken = text;
+    }
+
+    try {
+        accessToken = accessToken.replace(/"+/g, "").trim();
+    } catch {}
+
+    form.elements['accessToken'].value = accessToken;
+    return accessToken;
 }
 
 function directExpand(button) {
