@@ -234,9 +234,13 @@ function search(form, until=-1) {
                 }
             }
 
+            let result_count = json.data.length;
+            if (document.getElementById("result_count")) {
+                result_count += parseInt(document.getElementById("result_count").innerHTML);
+            }
             document.getElementById("apiInfo").innerHTML = `
                 ${until == -2 ? "<span class='has-text-weight-bold'>Token Refreshed</span> - " : ""}
-                ${json.data.length} Result${json.data.length == 1 ? "" : "s"} - <a href='${psURL}' target='_blank' 
+                <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"} - <a href='${psURL}' target='_blank' 
                 title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
             `;
             document.getElementById("searchButton").classList.remove("is-loading");
