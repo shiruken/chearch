@@ -43,6 +43,9 @@ function clearAccessToken() {
 }
 
 function getSettings() {
+    if (localStorage.getItem("exactAuthorMatch")) {
+        document.getElementById("exactAuthorMatch").checked = (localStorage.getItem("exactAuthorMatch") === "true");
+    }
     if (localStorage.getItem("renderMarkdown")) {
         document.getElementById("renderMarkdown").checked = (localStorage.getItem("renderMarkdown") === "true");
     }
@@ -76,7 +79,10 @@ function search(form, until=-1) {
         path += "kind=comment";
     }
     if (form.elements['author'].value != '') {
-        psURL += "&author=" + form.elements['author'].value + "&exact_author=true";
+        psURL += "&author=" + form.elements['author'].value;
+        if (form.elements['exactAuthorMatch'].checked) {
+            psURL += "&exact_author=true";
+        }
         path  += "&author=" + form.elements['author'].value;
     }
     if (form.elements['subreddit'].value != '') {
@@ -160,6 +166,8 @@ function search(form, until=-1) {
     history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path);
     let accessToken = parseAccessTokenInput();
     localStorage.setItem("accessToken", accessToken);
+    let exactAuthorMatch = form.elements['exactAuthorMatch'].checked;
+    localStorage.setItem("exactAuthorMatch", exactAuthorMatch);
     let renderMarkdown = form.elements['renderMarkdown'].checked;
     localStorage.setItem("renderMarkdown", renderMarkdown);
     let highlight = form.elements['highlight'].checked;
