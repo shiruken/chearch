@@ -132,13 +132,15 @@ async function search(form, until=-1) {
         path  += "&until=" + until;
     }
     if (form.elements['q'].value != '') {
-        if (form.elements['kind'].value == "submission" && form.elements['q'].value.startsWith("t3_")) {
-            psURL += "&ids=" + encodeURIComponent(form.elements['q'].value);
-        } else if (form.elements['kind'].value == "comment" && form.elements['q'].value.startsWith("t1_")) {
-            psURL += "&ids=" + encodeURIComponent(form.elements['q'].value);
+        const queryVal = form.elements['q'].value.trim();
+        if (form.elements['kind'].value == "submission" && queryVal.startsWith("t3_")) {
+            psURL += "&ids=" + encodeURIComponent(queryVal);
+        } else if (form.elements['kind'].value == "comment" && queryVal.startsWith("t1_")) {
+            psURL += "&ids=" + encodeURIComponent(queryVal);
+        } else {
+            psURL += "&q=" + encodeURIComponent(queryVal);
         }
-        psURL += "&q=" + encodeURIComponent(form.elements['q'].value);
-        path  += "&q=" + encodeURIComponent(form.elements['q'].value);
+        path  += "&q=" + encodeURIComponent(queryVal);
     }
     if (form.elements['limit'].value == '') {
         psURL += "&limit=100";
