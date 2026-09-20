@@ -57,7 +57,7 @@ function getSettings() {
     }
 }
 
-function search(form, until=-1) {
+async function search(form, until=-1) {
     
     if (until < 0) {    // New Search
         document.getElementById("results").innerHTML = "";
@@ -175,13 +175,26 @@ function search(form, until=-1) {
     let showThumbnails = form.elements['showThumbnails'].checked;
     localStorage.setItem("showThumbnails", showThumbnails);
 
-    load(psURL, accessToken).then(json => {
+    try {
+        const json = await load(psURL, accessToken);
+
+        if (!json || typeof json !== "object") {
+            throw new Error("Invalid response from Pushshift API");
+        }
 
         if ("detail" in json) {
-            const detail = JSON.parse(json.detail).detail; // API response is malformed
+            let detail = json.detail;
+            if (typeof detail === "string") {
+                try {
+                    const parsed = JSON.parse(detail);
+                    if (parsed && parsed.detail) {
+                        detail = parsed.detail;
+                    }
+                } catch {}
+            }
             console.log(detail);
 
-            if (detail == "Access token is invalid or malformed.") {
+            if (detail == "Access token is invalid or malformed." || detail == "Not authenticated") {
                 trackEvent('token-invalid');
                 clearAccessToken();
                 document.getElementById("apiInfo").innerHTML = `
@@ -197,95 +210,101 @@ function search(form, until=-1) {
                 `;
             } else if (detail == "Access token is expired.") {
                 document.getElementById("apiInfo").innerHTML = "Refreshing Token...";
-                refreshToken(accessToken).then(token => {
-                    if (token == null) {
-                        trackEvent('refresh-fail');
-                        clearAccessToken();
-                        document.getElementById("apiInfo").innerHTML = `
-                            Error Refreshing Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
-                            title="Request new access token from Pushshift" class="has-text-danger">Request New Token</a>
-                        `;
-                    } else {
-                        trackEvent('refresh-success');
-                        document.getElementById("accessToken").value = token;
-                        search(form, -2);
-                        return;
-                    }
-                });
+                const token = await refreshToken(accessToken);
+                if (token == null) {
+                    trackEvent('refresh-fail');
+                    clearAccessToken();
+                    document.getElementById("apiInfo").innerHTML = `
+                        Error Refreshing Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
+                        title="Request new access token from Pushshift" class="has-text-danger">Request New Token</a>
+                    `;
+                } else {
+                    trackEvent('refresh-success');
+                    document.getElementById("accessToken").value = token;
+                    search(form, -2);
+                    return;
+                }
             } else {
                 trackEvent('error-request');
+                const errorMsg = (typeof detail === "string" && detail.length > 0) ? detail : "Pushshift May Be Down";
                 document.getElementById("apiInfo").innerHTML = `
-                    Search Error: Pushshift May Be Down - <a href='${psURL}' target='_blank'
+                    Search Error: ${errorMsg} - <a href='${psURL}' target='_blank'
                     title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
                 `;
             }
-
-            document.getElementById("searchButton").classList.remove("is-loading");            
             return;
         }
 
-        try {
-            html = generateHTML(json.data, renderMarkdown, showThumbnails);
-            document.getElementById("results").innerHTML += html;
-
-            // Highlight search terms
-            searchTerm = form.elements['q'].value;
-            if (highlight && searchTerm.length > 0) {
-                let instance = new Mark(document.querySelector("#results"));
-                if (!searchTerm.startsWith('"')) {
-                    let searchArray = searchTerm.split(" ");
-                    instance.mark(searchArray, {
-                        "wildcards": "enabled",
-                        "accuracy": "complementary"
-                    });
-                } else {
-                    let term = searchTerm.replaceAll('"', "");
-                    instance.mark(term, {
-                        "accuracy": "partially",
-                        "separateWordSearch": false
-                    });
-                }
-            }
-
-            let result_count = json.data.length;
-            if (document.getElementById("result_count")) {
-                result_count += parseInt(document.getElementById("result_count").innerHTML);
-            }
-            document.getElementById("apiInfo").innerHTML = `
-                ${until == -2 ? "<span class='has-text-weight-bold'>Token Refreshed</span> - " : ""}
-                <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"} - <a href='${psURL}' target='_blank' 
-                title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
-            `;
-            document.getElementById("searchButton").classList.remove("is-loading");
-            try {
-                document.getElementById("fetch-" + until).remove();
-            } catch {}
-
-            // Inject buttons for expanding linked media
-            let links = document.querySelectorAll(".expand a");
-            for (let link of links) {
-                if (link.nextElementSibling == null || link.nextElementSibling.tagName != "BUTTON") {
-                    let url = link.href;
-                    let extensions = [".jpg", ".jpeg", ".png", ".gif", ".gifv", ".mp4"];
-                    if (extensions.some(extension => url.includes(extension))) {
-                        let button = document.createElement("button");
-                        button.classList.add("delete", "closed");
-                        button.setAttribute("onclick", "directExpand(this)");
-                        link.after(button);
-                    }
-                }
-            }
-
-        } catch (e) {
-            console.log(e);
-            trackEvent('error-response');
-            document.getElementById("apiInfo").innerHTML = `
-                Search Error: Pushshift May Be Down - <a href='${psURL}' target='_blank'
-                title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
-            `;
-            document.getElementById("searchButton").classList.remove("is-loading");
+        if (!Array.isArray(json.data)) {
+            throw new Error("Missing data array in response");
         }
-    })
+
+        html = generateHTML(json.data, renderMarkdown, showThumbnails);
+        document.getElementById("results").innerHTML += html;
+
+        // Highlight search terms
+        searchTerm = form.elements['q'].value;
+        if (highlight && searchTerm.length > 0) {
+            let instance = new Mark(document.querySelector("#results"));
+            if (!searchTerm.startsWith('"')) {
+                let searchArray = searchTerm.split(" ");
+                instance.mark(searchArray, {
+                    "wildcards": "enabled",
+                    "accuracy": "complementary"
+                });
+            } else {
+                let term = searchTerm.replaceAll('"', "");
+                instance.mark(term, {
+                    "accuracy": "partially",
+                    "separateWordSearch": false
+                });
+            }
+        }
+
+        let result_count = json.data.length;
+        if (document.getElementById("result_count")) {
+            result_count += parseInt(document.getElementById("result_count").innerHTML);
+        }
+        document.getElementById("apiInfo").innerHTML = `
+            ${until == -2 ? "<span class='has-text-weight-bold'>Token Refreshed</span> - " : ""}
+            <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"} - <a href='${psURL}' target='_blank' 
+            title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
+        `;
+        try {
+            document.getElementById("fetch-" + until).remove();
+        } catch {}
+
+        // Inject buttons for expanding linked media
+        let links = document.querySelectorAll(".expand a");
+        for (let link of links) {
+            if (link.nextElementSibling == null || link.nextElementSibling.tagName != "BUTTON") {
+                let url = link.href;
+                let extensions = [".jpg", ".jpeg", ".png", ".gif", ".gifv", ".mp4"];
+                if (extensions.some(extension => url.includes(extension))) {
+                    let button = document.createElement("button");
+                    button.classList.add("delete", "closed");
+                    button.setAttribute("onclick", "directExpand(this)");
+                    link.after(button);
+                }
+            }
+        }
+
+    } catch (e) {
+        console.log(e);
+        trackEvent('error-response');
+        document.getElementById("apiInfo").innerHTML = `
+            Search Error: Pushshift May Be Down - <a href='${psURL}' target='_blank'
+            title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
+        `;
+    } finally {
+        document.getElementById("searchButton").classList.remove("is-loading");
+        if (until >= 0) {
+            const fetchBtn = document.getElementById("fetch-" + until);
+            if (fetchBtn) {
+                fetchBtn.classList.remove("is-loading");
+            }
+        }
+    }
 }
 
 function fetchMore(until) {
@@ -422,15 +441,9 @@ function formatText(text, use_markdown) {
 }
 
 async function load(url, accessToken) {
-    let obj = null;
-    try {
-        let headers = { headers: { "Authorization": `Bearer ${accessToken}` } };
-        obj = await fetch(url, headers);
-        obj = await obj.json();
-    } catch (e) {
-        console.log(e);
-    }
-    return obj;
+    let headers = { headers: { "Authorization": `Bearer ${accessToken}` } };
+    let response = await fetch(url, headers);
+    return await response.json();
 }
 
 async function refreshToken(accessToken) {
