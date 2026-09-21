@@ -284,16 +284,18 @@ async function search(form, until=-1) {
         `;
 
         // Inject buttons for expanding linked media
-        let links = document.querySelectorAll(".expand a");
-        for (let link of links) {
-            if (link.nextElementSibling == null || link.nextElementSibling.tagName != "BUTTON") {
-                let url = link.href;
-                let extensions = [".jpg", ".jpeg", ".png", ".gif", ".gifv", ".mp4"];
-                if (extensions.some(extension => url.includes(extension))) {
-                    let button = document.createElement("button");
-                    button.classList.add("delete", "closed");
-                    button.setAttribute("onclick", "directExpand(this)");
-                    link.after(button);
+        const extensions = [".jpg", ".jpeg", ".png", ".gif", ".gifv", ".mp4"];
+        for (const card of newCards) {
+            const links = card.querySelectorAll(".expand a");
+            for (const link of links) {
+                if (link.nextElementSibling == null || link.nextElementSibling.tagName != "BUTTON") {
+                    const url = link.href;
+                    if (extensions.some(extension => url.includes(extension))) {
+                        const button = document.createElement("button");
+                        button.classList.add("delete", "closed");
+                        button.setAttribute("onclick", "directExpand(this)");
+                        link.after(button);
+                    }
                 }
             }
         }
@@ -461,12 +463,9 @@ function formatText(text, use_markdown) {
         text = markdownParser.render(text);
 
         // Link native Giphy embeds
-        const regex = /!\[gif\]\(giphy\|(\w+)[\|\w]*\)/g;
-        const matches = text.matchAll(regex);
-        for (const match of matches) {
-            let link = `<a href="https://media.giphy.com/media/${match[1]}/giphy.gif" target="_blank" rel="noopener noreferrer">${match[0]}</a>`;
-            text = text.replace(match[0], link);
-        }
+        text = text.replace(/!\[gif\]\(giphy\|(\w+)[\|\w]*\)/g, (match, id) =>
+            `<a href="https://media.giphy.com/media/${id}/giphy.gif" target="_blank" rel="noopener noreferrer">${match}</a>`
+        );
 
         return text;
     } else {
