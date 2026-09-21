@@ -9,6 +9,13 @@ window.addEventListener('popstate', () => {
 const form = document.getElementById('searchForm');
 form.addEventListener('submit', (event) => {
     event.preventDefault();
+    ['since', 'until'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.dataset.autoPopulated === "true") {
+            el.value = "";
+            delete el.dataset.autoPopulated;
+        }
+    });
     search(form);
 });
 
@@ -59,6 +66,46 @@ settingKeys.forEach(id => {
             try {
                 localStorage.setItem(id, el.checked);
             } catch {}
+        });
+    }
+});
+
+['since', 'until'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        const populateDefault = () => {
+            if (!el.value) {
+                const now = new Date();
+                const offset = now.getTimezoneOffset() * 60000;
+                const localDate = new Date(now - offset).toISOString().slice(0, 10);
+                el.value = `${localDate}T00:00`;
+                el.dataset.autoPopulated = "true";
+            }
+        };
+
+        el.addEventListener('pointerdown', populateDefault);
+
+        el.addEventListener('keydown', (e) => {
+            if (!el.value && (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown')) {
+                populateDefault();
+            } else if (e.key !== 'Tab' && e.key !== 'Escape') {
+                delete el.dataset.autoPopulated;
+            }
+        });
+
+        el.addEventListener('input', () => {
+            delete el.dataset.autoPopulated;
+        });
+
+        el.addEventListener('change', () => {
+            delete el.dataset.autoPopulated;
+        });
+
+        el.addEventListener('blur', () => {
+            if (el.dataset.autoPopulated === "true") {
+                el.value = "";
+                delete el.dataset.autoPopulated;
+            }
         });
     }
 });
