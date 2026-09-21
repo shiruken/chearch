@@ -463,16 +463,52 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
         count += 1;
         until = obj.created_utc;
         
-        let timestamp = new Date(obj.created_utc * 1000);
-        timestamp = timestamp.toString().split(" (")[0];
+        let timestamp = "";
+        let utcTimestamp = "";
+        if (obj.created_utc) {
+            const date = new Date(obj.created_utc * 1000);
+            if (!isNaN(date.getTime())) {
+                timestamp = date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+                utcTimestamp = date.toISOString().replace(".000Z", "Z");
+            }
+        }
 
-        const subreddit = escapeHTML(obj.subreddit);
-        const author = escapeHTML(obj.author);
+        const subreddit = escapeHTML(obj.subreddit || "");
+        const rawAuthor = obj.author || "[deleted]";
+        const author = escapeHTML(rawAuthor);
+        const lowerAuthor = author.toLowerCase();
+        const isAuthorDeleted = lowerAuthor === "[deleted]" || lowerAuthor === "[removed]";
+        let authorHtml;
+        if (isAuthorDeleted) {
+            const authorTitle = lowerAuthor === "[removed]" ? "Removed by moderator or Reddit" : "Deleted by user";
+            authorHtml = `<span class="has-text-grey ml-1" title="${authorTitle}">${author}</span>`;
+        } else {
+            authorHtml = `<a href="https://reddit.com/user/${author}" target="_blank" rel="noopener noreferrer" title="View user on Reddit" class="has-text-danger ml-1">u/${author}</a>`;
+        }
+
         const permalink = obj.permalink ? encodeURI(obj.permalink) : "";
+        let redditUrl;
+        if ("link_id" in obj) {
+            redditUrl = obj.permalink
+                ? "https://reddit.com" + permalink
+                : `https://reddit.com/comments/${encodeURIComponent(obj.link_id.replace("t3_", ""))}/-/${encodeURIComponent(obj.id)}`;
+        } else {
+            redditUrl = obj.permalink
+                ? "https://reddit.com" + permalink
+                : `https://reddit.com/comments/${encodeURIComponent(obj.id)}`;
+        }
+
         const scoreText = obj.score != null ? obj.score.toLocaleString() : "0";
+        const isNsfw = Boolean(obj.over_18);
+        const nsfwBadge = isNsfw ? `<span class="tag is-danger has-text-weight-bold nsfw-badge ml-2 mb-0" title="Not Safe For Work">NSFW</span>` : "";
+
+        let statsHtml = `<span class="score">Score: ${scoreText}</span>`;
+        if (timestamp) {
+            statsHtml = `<span class="score mr-1">Score: ${scoreText}</span> · <span class="timestamp ml-1"><span class="local-time">${timestamp}</span><span class="utc-time">${utcTimestamp}</span></span>`;
+        }
 
         html += `
-            <div class="card has-text-grey-light my-3">
+            <div class="card has-text-grey-light my-4">
                 <div class="card-content">
                     <div class="content mb-3">
                         <nav class="level">
@@ -480,61 +516,54 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
                                 <div class="level-item is-block-mobile">
                                     <a href="https://reddit.com/r/${subreddit}" target="_blank" rel="noopener noreferrer" title="View subreddit on Reddit" class="has-text-danger mr-1">r/${subreddit}</a>
                                     ·
-                                    <a href="https://reddit.com/user/${author}" target="_blank" rel="noopener noreferrer" title="View user on Reddit" class="has-text-danger ml-1">u/${author}</a>
+                                    ${authorHtml}${nsfwBadge}
                                 </div>
                             </div>
                             <div class="level-right">
                                 <div class="level-item is-block-mobile">
-                                    <p class="is-size-7">${timestamp}</p>
+                                    <p class="is-size-7">
+                                        ${statsHtml}
+                                    </p>
                                 </div>
                             </div>
                         </nav>
                     </div>
-                    <div class="media mb-1">
         `;
 
-        if (showThumbnails) {
-            if ("thumbnail" in obj && typeof obj.thumbnail === "string" && obj.thumbnail.startsWith("http")) {
+        if ("link_id" in obj) {  // Comment
+            html += `
+                    <div class="content mb-3 markdown expand wrap">
+                        ${formatText(obj.body, renderMarkdown)}
+                    </div>
+            `;
+        } else {  // Post
+            const formattedSelftext = formatText(obj.selftext, renderMarkdown);
+            const mediaMargin = (!obj.is_self || !formattedSelftext) ? "mb-3" : "mb-2";
+
+            html += `
+                    <div class="media ${mediaMargin}">
+            `;
+
+            if (showThumbnails && "thumbnail" in obj && typeof obj.thumbnail === "string" && obj.thumbnail.startsWith("http")) {
                 const thumbUrl = escapeHTML(obj.thumbnail.replace(/&amp;/g, "&"));
                 html += `
                         <div class="media-left">
                             <figure class="image is-96x96">
-                                <a href="https://reddit.com${permalink}" target="_blank" rel="noopener noreferrer" title="View post on Reddit">
+                                <a href="${redditUrl}" target="_blank" rel="noopener noreferrer" title="View on Reddit">
                                     <img src="${thumbUrl}" alt="Thumbnail" onerror="hideThumbnail(this)">
                                 </a>
                             </figure>
                         </div>
                 `;
             }
-        }
 
-        html +=         `<div class="media-content">`;
-
-        if ("link_id" in obj) {  // Comment
-            let link;
-            if (obj.permalink) {
-                link = "https://reddit.com" + permalink;
-            } else {
-                link = `https://reddit.com/comments/${encodeURIComponent(obj.link_id.replace("t3_", ""))}/-/${encodeURIComponent(obj.id)}`;
-            }
             html += `
-                            <p>
-                                <a href="${link}" target="_blank" rel="noopener noreferrer" title="View comment on Reddit" class="has-text-light has-text-weight-bold">Comment Link</a> 
-                                <span class="has-text-grey-light is-size-7 score">[Score: ${scoreText}]</span>
-                            </p>
-                        </div>
-                    </div>
-                    <div class="content mt-3 markdown expand wrap">
-                        ${formatText(obj.body, renderMarkdown)}
-                    </div>
-            `;
-        } else {  // Post
-            html += `
-                            <p>
-                                <a href="https://reddit.com${permalink}" target="_blank" rel="noopener noreferrer" title="View post on Reddit" class="has-text-light has-text-weight-bold">${escapeHTML(obj.title)}</a> 
-                                <span class="has-text-grey-light is-size-7 score">[Score: ${scoreText}]</span>
+                        <div class="media-content">
+                            <p class="post-title">
+                                <a href="${redditUrl}" target="_blank" rel="noopener noreferrer" class="has-text-light has-text-weight-bold">${escapeHTML(obj.title)}</a>
                             </p>
             `;
+
             if (!obj.is_self) {  // Link Post
                 const escapedUrl = escapeHTML(obj.url);
                 html += `
@@ -548,14 +577,15 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
                 html += `
                         </div>
                     </div>
-                    <div class="content mt-3 markdown expand wrap">
-                        ${formatText(obj.selftext, renderMarkdown)}
-                    </div>
+                    ${formattedSelftext ? `<div class="content mb-3 markdown expand wrap">${formattedSelftext}</div>` : ""}
                 `;
             }
         }
 
         html += `
+                    <div class="card-footer-action is-size-7 mt-3">
+                        <a href="${redditUrl}" target="_blank" rel="noopener noreferrer" class="has-text-grey-light">View on Reddit</a>
+                    </div>
                 </div>
             </div>
         `;

@@ -14,6 +14,13 @@
     height: 96px;
     object-fit: cover;
 }
+.tag.nsfw-badge {
+    font-size: 0.65rem;
+    padding-left: 0.45em;
+    padding-right: 0.45em;
+    border-radius: 3px;
+    align-self: center;
+}
 .markdown, .markdown strong, .markdown h1, .markdown h2,
 .markdown h3, .markdown h4, .markdown h5, .markdown h6,
 .markdown ul, .markdown ol, .markdown li,
@@ -74,6 +81,36 @@ span.score {
 }
 #apiInfo a.has-text-grey-light:hover {
     color: #FFFFFF !important;
+}
+.card-footer-action a.has-text-grey-light {
+    transition: color 0.15s ease-in-out;
+}
+.card-footer-action a.has-text-grey-light:hover {
+    color: #F14668 !important;
+}
+.post-title {
+    font-size: 1.125rem;
+    line-height: 1.35;
+}
+.timestamp {
+    display: inline-grid;
+    grid-template-areas: "time";
+    vertical-align: baseline;
+    justify-items: start;
+}
+.timestamp .local-time,
+.timestamp .utc-time {
+    grid-area: time;
+    white-space: nowrap;
+}
+.timestamp .utc-time {
+    visibility: hidden;
+}
+.timestamp:hover .local-time {
+    visibility: hidden;
+}
+.timestamp:hover .utc-time {
+    visibility: visible;
 }
 @media screen and (max-width: 768px) {
     /* Reduce spacing between level items on mobile */
