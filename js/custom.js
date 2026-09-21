@@ -325,6 +325,11 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
         let timestamp = new Date(obj.created_utc * 1000);
         timestamp = timestamp.toString().split(" (")[0];
 
+        const subreddit = escapeHTML(obj.subreddit);
+        const author = escapeHTML(obj.author);
+        const permalink = obj.permalink ? encodeURI(obj.permalink) : "";
+        const scoreText = obj.score != null ? obj.score.toLocaleString() : "0";
+
         html += `
             <div class="card has-text-grey-light my-3">
                 <div class="card-content">
@@ -332,9 +337,9 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
                         <nav class="level">
                             <div class="level-left">
                                 <div class="level-item is-block-mobile">
-                                    <a href="https://reddit.com/r/${obj.subreddit}" title="View subreddit on Reddit" class="has-text-danger mr-1">r/${obj.subreddit}</a>
+                                    <a href="https://reddit.com/r/${subreddit}" title="View subreddit on Reddit" class="has-text-danger mr-1">r/${subreddit}</a>
                                     ·
-                                    <a href="https://reddit.com/user/${obj.author}" title="View user on Reddit" class="has-text-danger ml-1">u/${obj.author}</a>
+                                    <a href="https://reddit.com/user/${author}" title="View user on Reddit" class="has-text-danger ml-1">u/${author}</a>
                                 </div>
                             </div>
                             <div class="level-right">
@@ -348,12 +353,12 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
         `;
 
         if (showThumbnails) {
-            if ("thumbnail" in obj && obj.thumbnail.endsWith(".jpg")) {
+            if ("thumbnail" in obj && typeof obj.thumbnail === "string" && obj.thumbnail.endsWith(".jpg")) {
                 html += `
                         <div class="media-left">
                             <figure class="image is-96x96">
-                                <a href="https://reddit.com${obj.permalink}" title="View post on Reddit">
-                                    <img src="${obj.thumbnail}" alt="Thumbnail" onerror="hideThumbnail(this)">
+                                <a href="https://reddit.com${permalink}" title="View post on Reddit">
+                                    <img src="${escapeHTML(obj.thumbnail)}" alt="Thumbnail" onerror="hideThumbnail(this)">
                                 </a>
                             </figure>
                         </div>
@@ -366,14 +371,14 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
         if ("link_id" in obj) {  // Comment
             let link;
             if (obj.permalink) {
-                link = "https://reddit.com" + obj.permalink;
+                link = "https://reddit.com" + permalink;
             } else {
-                link = `https://reddit.com//comments/${obj.link_id.replace("t3_", "")}/-/${obj.id}`;
+                link = `https://reddit.com/comments/${encodeURIComponent(obj.link_id.replace("t3_", ""))}/-/${encodeURIComponent(obj.id)}`;
             }
             html += `
                             <p>
                                 <a href="${link}" title="View comment on Reddit" class="has-text-light has-text-weight-bold">Comment Link</a> 
-                                <span class="has-text-grey-light is-size-7 score">[Score: ${obj.score.toLocaleString()}]</span>
+                                <span class="has-text-grey-light is-size-7 score">[Score: ${scoreText}]</span>
                             </p>
                         </div>
                     </div>
@@ -384,14 +389,15 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
         } else {  // Post
             html += `
                             <p>
-                                <a href="https://reddit.com${obj.permalink}" title="View post on Reddit" class="has-text-light has-text-weight-bold">${obj.title}</a> 
-                                <span class="has-text-grey-light is-size-7 score">[Score: ${obj.score.toLocaleString()}]</span>
+                                <a href="https://reddit.com${permalink}" title="View post on Reddit" class="has-text-light has-text-weight-bold">${escapeHTML(obj.title)}</a> 
+                                <span class="has-text-grey-light is-size-7 score">[Score: ${scoreText}]</span>
                             </p>
             `;
             if (!obj.is_self) {  // Link Post
+                const escapedUrl = escapeHTML(obj.url);
                 html += `
                             <p class="expand wrap">
-                                <a href="${obj.url}" title="View linked URL" class="has-text-danger">${obj.url}</a>
+                                <a href="${escapedUrl}" title="View linked URL" class="has-text-danger">${escapedUrl}</a>
                             </p>
                         </div>
                     </div>
@@ -424,7 +430,18 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
     return html;
 }
 
+function escapeHTML(str) {
+    if (str == null) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function formatText(text, use_markdown) {
+    if (!text) return "";
     if (use_markdown) {
         text = SnuOwnd.getParser().render(text);
 
@@ -438,7 +455,7 @@ function formatText(text, use_markdown) {
 
         return text;
     } else {
-        return text.replaceAll("\n", "<br>");
+        return escapeHTML(text).replaceAll("\n", "<br>");
     }
 }
 
