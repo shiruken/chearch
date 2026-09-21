@@ -21,7 +21,7 @@ function loadParams() {
             if (param[0] == "until" || param[0] == "since") {
                 value = new Date(param[1] * 1000);
                 const offset = new Date().getTimezoneOffset() * 60000;
-                value = new Date(value - offset).toISOString().slice(0, -1);
+                value = new Date(value - offset).toISOString().slice(0, 16);
             } else {
                 value = param[1];
             }
@@ -537,6 +537,9 @@ function parseAccessTokenInput() {
 
     try {
         accessToken = accessToken.replace(/"+/g, "").trim();
+        if (accessToken.startsWith("Bearer ")) {
+            accessToken = accessToken.slice(7).trim();
+        }
     } catch {}
 
     form.elements['accessToken'].value = accessToken;
