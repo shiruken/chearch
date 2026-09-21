@@ -124,12 +124,49 @@ function getSettings() {
     });
 }
 
+let latestCurlCommand = "";
+let currentJsonBlobURL = null;
+let accumulatedResults = [];
+let copyTimeout;
+
+async function copyCurl(btnElement) {
+    if (!latestCurlCommand) return;
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(latestCurlCommand);
+        } else {
+            const ta = document.createElement("textarea");
+            ta.value = latestCurlCommand;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+        }
+        if (btnElement) {
+            btnElement.innerText = "Copied!";
+            clearTimeout(copyTimeout);
+            copyTimeout = setTimeout(() => {
+                btnElement.innerText = "Copy cURL";
+            }, 1500);
+        }
+    } catch (err) {
+        console.error("Failed to copy cURL:", err);
+    }
+}
+
 async function search(form, until=-1) {
     
     if (until < 0) {    // New Search
         document.getElementById("results").innerHTML = "";
+        accumulatedResults = [];
         if (until == -1) {
             document.getElementById("apiInfo").innerHTML = "";
+            if (currentJsonBlobURL) {
+                URL.revokeObjectURL(currentJsonBlobURL);
+                currentJsonBlobURL = null;
+            }
         }
     } else {            // Fetch More
         document.getElementById("fetch-"+until).classList.add("is-loading");
@@ -245,6 +282,11 @@ async function search(form, until=-1) {
         localStorage.setItem("showThumbnails", showThumbnails);
     } catch {}
 
+    const safeUrl = psURL.replaceAll("'", "%27");
+    latestCurlCommand = accessToken 
+        ? `curl '${safeUrl}' \\\n  -H 'Authorization: Bearer ${accessToken}'`
+        : `curl '${safeUrl}'`;
+
     try {
         const json = await load(psURL, accessToken);
 
@@ -298,8 +340,12 @@ async function search(form, until=-1) {
                 trackEvent('error-request');
                 const errorMsg = (typeof detail === "string" && detail.length > 0) ? detail : "Pushshift May Be Down";
                 document.getElementById("apiInfo").innerHTML = `
-                    Search Error: ${errorMsg} - <a href='${psURL}' target='_blank' rel='noopener noreferrer'
-                    title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
+                    <div>
+                        <span class="has-text-danger has-text-weight-semibold">Search Error: ${errorMsg}</span>
+                    </div>
+                    <div class="is-size-7 mt-1">
+                        <a href="#" onclick="event.preventDefault(); copyCurl(this);" title="Copy cURL command to clipboard" class="has-text-grey-light">Copy cURL</a>
+                    </div>
                 `;
             }
             return;
@@ -341,14 +387,28 @@ async function search(form, until=-1) {
             }
         }
 
-        let result_count = json.data.length;
-        if (document.getElementById("result_count")) {
-            result_count += parseInt(document.getElementById("result_count").innerHTML);
+        accumulatedResults = accumulatedResults.concat(json.data);
+        const result_count = accumulatedResults.length;
+
+        if (currentJsonBlobURL) {
+            URL.revokeObjectURL(currentJsonBlobURL);
         }
+        const accumulatedJson = { ...json, data: accumulatedResults };
+        const blob = new Blob([JSON.stringify(accumulatedJson, null, 2)], { type: "application/json" });
+        currentJsonBlobURL = URL.createObjectURL(blob);
+
         document.getElementById("apiInfo").innerHTML = `
-            ${until == -2 ? "<span class='has-text-weight-bold'>Token Refreshed</span> - " : ""}
-            <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"} - <a href='${psURL}' target='_blank' rel='noopener noreferrer' 
-            title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
+            <div>
+                <span class="has-text-weight-bold has-text-white">
+                    ${until == -2 ? "<span class='has-text-weight-normal mr-1'>Token Refreshed -</span>" : ""}
+                    <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"}
+                </span>
+            </div>
+            <div class="is-size-7 mt-1">
+                <a href="${currentJsonBlobURL}" target="_blank" rel="noopener noreferrer" title="View raw JSON response" class="has-text-grey-light">View JSON</a>
+                <span class="has-text-grey mx-1">·</span>
+                <a href="#" onclick="event.preventDefault(); copyCurl(this);" title="Copy cURL command to clipboard" class="has-text-grey-light">Copy cURL</a>
+            </div>
         `;
 
         // Inject buttons for expanding linked media
@@ -372,8 +432,12 @@ async function search(form, until=-1) {
         console.log(e);
         trackEvent('error-response');
         document.getElementById("apiInfo").innerHTML = `
-            Search Error: Pushshift May Be Down - <a href='${psURL}' target='_blank' rel='noopener noreferrer'
-            title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
+            <div>
+                <span class="has-text-danger has-text-weight-semibold">Search Error: Pushshift May Be Down</span>
+            </div>
+            <div class="is-size-7 mt-1">
+                <a href="#" onclick="event.preventDefault(); copyCurl(this);" title="Copy cURL command to clipboard" class="has-text-grey-light">Copy cURL</a>
+            </div>
         `;
     } finally {
         document.getElementById("searchButton").classList.remove("is-loading");

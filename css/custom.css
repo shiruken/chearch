@@ -69,6 +69,12 @@ span.score {
     height: auto;
     object-fit: contain;
 }
+#apiInfo a.has-text-grey-light {
+    transition: color 0.15s ease-in-out;
+}
+#apiInfo a.has-text-grey-light:hover {
+    color: #FFFFFF !important;
+}
 @media screen and (max-width: 768px) {
     /* Reduce spacing between level items on mobile */
     .level-left + .level-right {
