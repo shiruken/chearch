@@ -241,8 +241,13 @@ async function search(form, until=-1) {
             throw new Error("Missing data array in response");
         }
 
+        const oldFetchButton = document.getElementById("fetch-" + until);
+        if (oldFetchButton) {
+            oldFetchButton.remove();
+        }
+
         const html = generateHTML(json.data, renderMarkdown, showThumbnails);
-        document.getElementById("results").innerHTML += html;
+        document.getElementById("results").insertAdjacentHTML("beforeend", html);
 
         // Highlight search terms
         const searchTerm = form.elements['q'].value;
@@ -272,9 +277,6 @@ async function search(form, until=-1) {
             <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"} - <a href='${psURL}' target='_blank' rel='noopener noreferrer' 
             title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
         `;
-        try {
-            document.getElementById("fetch-" + until).remove();
-        } catch {}
 
         // Inject buttons for expanding linked media
         let links = document.querySelectorAll(".expand a");
