@@ -81,13 +81,19 @@
                     <div class="field is-horizontal">
                         <div class="field-body">
                             <div class="field">
-                                <label class="label is-uppercase has-text-grey-lighter is-size-7" for="since">Since</label>
+                                <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                                    <label class="label is-uppercase has-text-grey-lighter is-size-7 mb-0" for="since">After</label>
+                                    <a href="#" id="clear-since" class="is-size-7 has-text-grey clear-date is-hidden" onclick="event.preventDefault(); clearDate('since');" title="Clear 'After' date">Clear</a>
+                                </div>
                                 <div class="control">
                                     <input id="since" name="since" type="datetime-local" class="input">
                                 </div>
                             </div>
                             <div class="field">
-                                <label class="label is-uppercase has-text-grey-lighter is-size-7" for="until">Until</label>
+                                <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                                    <label class="label is-uppercase has-text-grey-lighter is-size-7 mb-0" for="until">Before</label>
+                                    <a href="#" id="clear-until" class="is-size-7 has-text-grey clear-date is-hidden" onclick="event.preventDefault(); clearDate('until');" title="Clear 'Before' date">Clear</a>
+                                </div>
                                 <div class="control">
                                     <input id="until" name="until" type="datetime-local" class="input">
                                 </div>

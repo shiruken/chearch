@@ -88,6 +88,12 @@ span.score {
 .card-footer-action a.has-text-grey-light:hover {
     color: #F14668 !important;
 }
+.clear-date {
+    transition: color 0.15s ease-in-out;
+}
+.clear-date:hover {
+    color: #F14668 !important;
+}
 .post-title {
     font-size: 1.125rem;
     line-height: 1.35;

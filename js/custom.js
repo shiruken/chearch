@@ -16,8 +16,57 @@ form.addEventListener('submit', (event) => {
             delete el.dataset.autoPopulated;
         }
     });
+    updateClearDateButtons();
+    if (!validateDateRange()) {
+        const untilEl = document.getElementById("until");
+        if (untilEl) untilEl.reportValidity();
+        return;
+    }
     search(form);
 });
+
+function validateDateRange() {
+    const sinceEl = document.getElementById("since");
+    const untilEl = document.getElementById("until");
+    if (!sinceEl || !untilEl) return true;
+
+    if (sinceEl.value && untilEl.value) {
+        const sinceTime = new Date(sinceEl.value).getTime();
+        const untilTime = new Date(untilEl.value).getTime();
+        if (untilTime <= sinceTime) {
+            untilEl.setCustomValidity("Please select a date later than the 'After' date");
+            return false;
+        }
+    }
+    untilEl.setCustomValidity("");
+    return true;
+}
+
+function clearDate(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = "";
+    delete el.dataset.autoPopulated;
+    validateDateRange();
+    updateClearDateButtons();
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function updateClearDateButtons() {
+    ['since', 'until'].forEach(id => {
+        const el = document.getElementById(id);
+        const btn = document.getElementById(`clear-${id}`);
+        if (el && btn) {
+            const hasCommittedValue = Boolean(el.value) && el.dataset.autoPopulated !== "true";
+            if (!hasCommittedValue) {
+                btn.classList.add('is-hidden');
+            } else if (document.activeElement !== el) {
+                btn.classList.remove('is-hidden');
+            }
+        }
+    });
+}
 
 function loadParams() {
     form.reset();
@@ -42,6 +91,8 @@ function loadParams() {
     }
     getAccessToken();
     getSettings();
+    validateDateRange();
+    updateClearDateButtons();
 }
 
 function getAccessToken() {
@@ -95,10 +146,14 @@ settingKeys.forEach(id => {
 
         el.addEventListener('input', () => {
             delete el.dataset.autoPopulated;
+            validateDateRange();
+            updateClearDateButtons();
         });
 
         el.addEventListener('change', () => {
             delete el.dataset.autoPopulated;
+            validateDateRange();
+            updateClearDateButtons();
         });
 
         el.addEventListener('blur', () => {
@@ -106,6 +161,8 @@ settingKeys.forEach(id => {
                 el.value = "";
                 delete el.dataset.autoPopulated;
             }
+            validateDateRange();
+            updateClearDateButtons();
         });
     }
 });
@@ -153,6 +210,13 @@ async function copyCurl(btnElement) {
         }
     } catch (err) {
         console.error("Failed to copy cURL:", err);
+    }
+}
+
+async function ensureMinLoadingTime(startTime, minDuration = 500) {
+    const elapsed = Date.now() - startTime;
+    if (elapsed < minDuration) {
+        await new Promise(resolve => setTimeout(resolve, minDuration - elapsed));
     }
 }
 
@@ -225,15 +289,19 @@ async function search(form, until=-1) {
     if (until >= 0) {
         psURL += "&until=" + until;
     } else if (form.elements['until'].value != '') {
-        until = new Date(form.elements['until'].value).valueOf() / 1000;
+        const formUntil = new Date(form.elements['until'].value).valueOf() / 1000;
         if (since) {
-            if (until < since) {
-                document.getElementById("apiInfo").innerHTML = "'Until' must be after 'Since'";
+            if (formUntil <= since) {
+                const untilEl = document.getElementById("until");
+                if (untilEl) {
+                    untilEl.setCustomValidity("Please select a date later than the 'After' date");
+                    untilEl.reportValidity();
+                }
                 return;
             }
         }
-        psURL += "&until=" + until;
-        path  += "&until=" + until;
+        psURL += "&until=" + formUntil;
+        path  += "&until=" + formUntil;
     }
     if (form.elements['q'].value != '') {
         const queryVal = form.elements['q'].value.trim();
@@ -265,9 +333,11 @@ async function search(form, until=-1) {
         path  += "&limit=" + limit;
     }
     
-    if (until == -1) {	// Search
+    if (until < 0) {	// Search
         document.getElementById("searchButton").classList.add("is-loading");
-        history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path);
+        if (until == -1) {
+            history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path);
+        }
     }
     let accessToken = parseAccessTokenInput();
     let exactAuthorMatch = form.elements['exactAuthorMatch'].checked;
@@ -287,8 +357,11 @@ async function search(form, until=-1) {
         ? `curl '${safeUrl}' \\\n  -H 'Authorization: Bearer ${accessToken}'`
         : `curl '${safeUrl}'`;
 
+    const searchStartTime = Date.now();
+
     try {
         const json = await load(psURL, accessToken);
+        await ensureMinLoadingTime(searchStartTime);
 
         if (!json || typeof json !== "object") {
             throw new Error("Invalid response from Pushshift API");
@@ -333,7 +406,7 @@ async function search(form, until=-1) {
                 } else {
                     trackEvent('refresh-success');
                     document.getElementById("accessToken").value = token;
-                    search(form, -2);
+                    await search(form, -2);
                     return;
                 }
             } else {
@@ -429,6 +502,7 @@ async function search(form, until=-1) {
         }
 
     } catch (e) {
+        await ensureMinLoadingTime(searchStartTime);
         console.log(e);
         trackEvent('error-response');
         document.getElementById("apiInfo").innerHTML = `
@@ -440,6 +514,7 @@ async function search(form, until=-1) {
             </div>
         `;
     } finally {
+        await ensureMinLoadingTime(searchStartTime);
         document.getElementById("searchButton").classList.remove("is-loading");
         if (until >= 0) {
             const fetchBtn = document.getElementById("fetch-" + until);
