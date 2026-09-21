@@ -21,10 +21,10 @@
                         <div class="control">
                             <div class="field has-addons">
                                 <div class="control is-expanded">
-                                    <input id="accessToken" name="accessToken" type="text" class="input" placeholder="Required" required>
+                                    <input id="accessToken" name="accessToken" type="password" class="input" placeholder="Required" required autocomplete="off" spellcheck="false" onfocus="this.type='text'" onblur="this.type='password'">
                                 </div>
                                 <div class="control">
-                                    <a class="button is-danger is-outlined" onclick="clearAccessToken()" title="Clear cached access token">Clear</a>
+                                    <a class="button is-danger is-outlined" onclick="clearAccessToken(true)" title="Clear cached access token">Clear</a>
                                 </div>
                             </div>
                         </div>

@@ -137,16 +137,24 @@ function loadParams() {
 }
 
 function getAccessToken() {
-    if (localStorage.getItem("accessToken")) {
-        document.getElementById("accessToken").value = localStorage.getItem("accessToken");
-    }
+    try {
+        const stored = localStorage.getItem("accessToken");
+        if (stored) {
+            document.getElementById("accessToken").value = stored.replace(/['"]+/g, "").trim();
+        }
+    } catch {}
 }
 
-function clearAccessToken() {
+function clearAccessToken(userInitiated = false) {
     try {
         localStorage.removeItem("accessToken");
     } catch {}
     form.elements['accessToken'].value = "";
+    if (userInitiated) {
+        document.getElementById("apiInfo").innerHTML = "";
+        const el = document.getElementById("accessToken");
+        if (el) el.focus();
+    }
 }
 
 const settingKeys = ["exactAuthorMatch", "renderMarkdown", "highlight", "showThumbnails"];
@@ -221,6 +229,16 @@ if (limitEl) {
     limitEl.addEventListener('input', () => limitEl.setCustomValidity(''));
 }
 
+const tokenEl = document.getElementById('accessToken');
+if (tokenEl) {
+    tokenEl.addEventListener('focus', () => {
+        tokenEl.type = 'text';
+    });
+    tokenEl.addEventListener('blur', () => {
+        tokenEl.type = 'password';
+    });
+}
+
 function getSettings() {
     settingKeys.forEach(id => {
         try {
@@ -274,7 +292,7 @@ async function ensureMinLoadingTime(startTime, minDuration = 500) {
     }
 }
 
-async function search(form, until=-1) {
+async function search(form, until=-1, isRetry=false) {
     
     if (until < 0) {    // New Search
         document.getElementById("results").innerHTML = "";
@@ -287,7 +305,10 @@ async function search(form, until=-1) {
             }
         }
     } else {            // Fetch More
-        document.getElementById("fetch-"+until).classList.add("is-loading");
+        const fetchBtn = document.getElementById("fetch-" + until);
+        if (fetchBtn) {
+            fetchBtn.classList.add("is-loading");
+        }
     }
 
     let min_score, max_score, since;
@@ -474,24 +495,30 @@ async function search(form, until=-1) {
                         detail = parsed.detail;
                     }
                 } catch {}
+            } else if (Array.isArray(detail)) {
+                detail = detail.map(d => (d && d.msg) ? d.msg : JSON.stringify(d)).join(", ");
             }
             console.log(detail);
 
-            if (detail == "Access token is invalid or malformed." || detail == "Not authenticated") {
-                trackEvent('token-invalid');
-                clearAccessToken();
-                document.getElementById("apiInfo").innerHTML = `
-                    Invalid Token - <a href="https://auth.pushshift.io/authorize" target="_blank" rel="noopener noreferrer"
-                    title="Request access token from Pushshift" class="has-text-danger">Request Token</a>
-                `;
-            } else if (detail == "Access token is revoked. This was done either manually or by reautheticating.") {
+            const detailLower = (typeof detail === "string") ? detail.toLowerCase() : "";
+
+            if (detailLower.includes("token") && detailLower.includes("revoked")) {
                 trackEvent('token-revoked');
                 clearAccessToken();
                 document.getElementById("apiInfo").innerHTML = `
                     Revoked Token - <a href="https://auth.pushshift.io/authorize" target="_blank" rel="noopener noreferrer"
                     title="Request new access token from Pushshift" class="has-text-danger">Request New Token</a>
                 `;
-            } else if (detail == "Access token is expired.") {
+            } else if (detailLower.includes("token") && detailLower.includes("expired")) {
+                if (isRetry) {
+                    trackEvent('refresh-fail');
+                    clearAccessToken();
+                    document.getElementById("apiInfo").innerHTML = `
+                        Error Refreshing Token - <a href="https://auth.pushshift.io/authorize" target="_blank" rel="noopener noreferrer"
+                        title="Request new access token from Pushshift" class="has-text-danger">Request New Token</a>
+                    `;
+                    return;
+                }
                 document.getElementById("apiInfo").innerHTML = "Refreshing Token...";
                 const token = await refreshToken(accessToken);
                 if (token == null) {
@@ -501,20 +528,40 @@ async function search(form, until=-1) {
                         Error Refreshing Token - <a href="https://auth.pushshift.io/authorize" target="_blank" rel="noopener noreferrer"
                         title="Request new access token from Pushshift" class="has-text-danger">Request New Token</a>
                     `;
+                    return;
                 } else {
                     trackEvent('refresh-success');
                     document.getElementById("accessToken").value = token;
-                    await search(form, -2);
+                    try {
+                        localStorage.setItem("accessToken", token);
+                    } catch {}
+                    const retryUntil = (until == -1) ? -2 : until;
+                    await search(form, retryUntil, true);
                     return;
                 }
+            } else if ((detailLower.includes("token") && (detailLower.includes("invalid") || detailLower.includes("malformed"))) || detailLower.includes("not authenticated")) {
+                trackEvent('token-invalid');
+                clearAccessToken();
+                document.getElementById("apiInfo").innerHTML = `
+                    Invalid Token - <a href="https://auth.pushshift.io/authorize" target="_blank" rel="noopener noreferrer"
+                    title="Request access token from Pushshift" class="has-text-danger">Request Token</a>
+                `;
             } else {
                 trackEvent('error-request');
+                if (currentJsonBlobURL) {
+                    URL.revokeObjectURL(currentJsonBlobURL);
+                }
+                const blob = new Blob([JSON.stringify(json, null, 2)], { type: "application/json" });
+                currentJsonBlobURL = URL.createObjectURL(blob);
+
                 const errorMsg = (typeof detail === "string" && detail.length > 0) ? detail : "Pushshift May Be Down";
                 document.getElementById("apiInfo").innerHTML = `
                     <div>
-                        <span class="has-text-danger has-text-weight-semibold">Search Error: ${errorMsg}</span>
+                        <span class="has-text-grey-lighter has-text-weight-semibold">Search Error: ${errorMsg}</span>
                     </div>
                     <div class="is-size-7 mt-1">
+                        <a href="${currentJsonBlobURL}" target="_blank" rel="noopener noreferrer" title="View raw JSON response" class="has-text-grey-light">View JSON</a>
+                        <span class="has-text-grey mx-1">·</span>
                         <a href="#" onclick="event.preventDefault(); copyCurl(this);" title="Copy cURL command to clipboard" class="has-text-grey-light">Copy cURL</a>
                     </div>
                 `;
@@ -605,7 +652,7 @@ async function search(form, until=-1) {
         trackEvent('error-response');
         document.getElementById("apiInfo").innerHTML = `
             <div>
-                <span class="has-text-danger has-text-weight-semibold">Search Error: Pushshift May Be Down</span>
+                <span class="has-text-grey-lighter has-text-weight-semibold">Search Error: Pushshift May Be Down</span>
             </div>
             <div class="is-size-7 mt-1">
                 <a href="#" onclick="event.preventDefault(); copyCurl(this);" title="Copy cURL command to clipboard" class="has-text-grey-light">Copy cURL</a>
@@ -816,15 +863,17 @@ async function load(url, accessToken) {
 }
 
 async function refreshToken(accessToken) {
-    const url = "https://auth.pushshift.io/refresh?access_token=" + accessToken;
+    if (!accessToken || typeof accessToken !== "string") return null;
+    const cleanToken = accessToken.replace(/['"]+/g, "").trim();
+    const url = "https://auth.pushshift.io/refresh?access_token=" + encodeURIComponent(cleanToken);
     let newToken = null;
     try {
         const response = await fetch(url, { method: "POST" });
         const json = await response.json();
-        if (response.ok) {
-            newToken = json.access_token;
+        if (response.ok && json && typeof json.access_token === "string") {
+            newToken = json.access_token.replace(/['"]+/g, "").trim();
         } else {
-            console.log(`HTTP ${response.status}: ${json.detail}`);
+            console.log(`HTTP ${response.status}: ${json ? json.detail : response.statusText}`);
         }
     } catch(e) {
         console.log(e);
@@ -842,16 +891,16 @@ function parseAccessTokenInput() {
         if (type !== '[object Object]') {
             throw new Error("Not valid JSON object");
         }
-        if (!('access_token' in json)) {
+        accessToken = json['access_token'] || json['accessToken'] || json['token'];
+        if (!accessToken) {
             throw new Error("'access_token' missing from JSON");
         }
-        accessToken = json['access_token'];
     } catch {
         accessToken = text;
     }
 
     try {
-        accessToken = accessToken.replace(/"+/g, "").trim();
+        accessToken = String(accessToken).replace(/['"]+/g, "").trim();
         if (accessToken.startsWith("Bearer ")) {
             accessToken = accessToken.slice(7).trim();
         }
