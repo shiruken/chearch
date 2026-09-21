@@ -200,14 +200,14 @@ async function search(form, until=-1) {
                 trackEvent('token-invalid');
                 clearAccessToken();
                 document.getElementById("apiInfo").innerHTML = `
-                    Invalid Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
+                    Invalid Token - <a href="https://auth.pushshift.io/authorize" target="_blank" rel="noopener noreferrer"
                     title="Request access token from Pushshift" class="has-text-danger">Request Token</a>
                 `;
             } else if (detail == "Access token is revoked. This was done either manually or by reautheticating.") {
                 trackEvent('token-revoked');
                 clearAccessToken();
                 document.getElementById("apiInfo").innerHTML = `
-                    Revoked Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
+                    Revoked Token - <a href="https://auth.pushshift.io/authorize" target="_blank" rel="noopener noreferrer"
                     title="Request new access token from Pushshift" class="has-text-danger">Request New Token</a>
                 `;
             } else if (detail == "Access token is expired.") {
@@ -217,7 +217,7 @@ async function search(form, until=-1) {
                     trackEvent('refresh-fail');
                     clearAccessToken();
                     document.getElementById("apiInfo").innerHTML = `
-                        Error Refreshing Token - <a href="https://auth.pushshift.io/authorize" target="_blank"
+                        Error Refreshing Token - <a href="https://auth.pushshift.io/authorize" target="_blank" rel="noopener noreferrer"
                         title="Request new access token from Pushshift" class="has-text-danger">Request New Token</a>
                     `;
                 } else {
@@ -230,7 +230,7 @@ async function search(form, until=-1) {
                 trackEvent('error-request');
                 const errorMsg = (typeof detail === "string" && detail.length > 0) ? detail : "Pushshift May Be Down";
                 document.getElementById("apiInfo").innerHTML = `
-                    Search Error: ${errorMsg} - <a href='${psURL}' target='_blank'
+                    Search Error: ${errorMsg} - <a href='${psURL}' target='_blank' rel='noopener noreferrer'
                     title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
                 `;
             }
@@ -269,7 +269,7 @@ async function search(form, until=-1) {
         }
         document.getElementById("apiInfo").innerHTML = `
             ${until == -2 ? "<span class='has-text-weight-bold'>Token Refreshed</span> - " : ""}
-            <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"} - <a href='${psURL}' target='_blank' 
+            <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"} - <a href='${psURL}' target='_blank' rel='noopener noreferrer' 
             title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
         `;
         try {
@@ -295,7 +295,7 @@ async function search(form, until=-1) {
         console.log(e);
         trackEvent('error-response');
         document.getElementById("apiInfo").innerHTML = `
-            Search Error: Pushshift May Be Down - <a href='${psURL}' target='_blank'
+            Search Error: Pushshift May Be Down - <a href='${psURL}' target='_blank' rel='noopener noreferrer'
             title='View generated Pushshift API request URL' class='has-text-danger'>Generated API URL</a>
         `;
     } finally {
@@ -337,9 +337,9 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
                         <nav class="level">
                             <div class="level-left">
                                 <div class="level-item is-block-mobile">
-                                    <a href="https://reddit.com/r/${subreddit}" title="View subreddit on Reddit" class="has-text-danger mr-1">r/${subreddit}</a>
+                                    <a href="https://reddit.com/r/${subreddit}" target="_blank" rel="noopener noreferrer" title="View subreddit on Reddit" class="has-text-danger mr-1">r/${subreddit}</a>
                                     ·
-                                    <a href="https://reddit.com/user/${author}" title="View user on Reddit" class="has-text-danger ml-1">u/${author}</a>
+                                    <a href="https://reddit.com/user/${author}" target="_blank" rel="noopener noreferrer" title="View user on Reddit" class="has-text-danger ml-1">u/${author}</a>
                                 </div>
                             </div>
                             <div class="level-right">
@@ -357,7 +357,7 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
                 html += `
                         <div class="media-left">
                             <figure class="image is-96x96">
-                                <a href="https://reddit.com${permalink}" title="View post on Reddit">
+                                <a href="https://reddit.com${permalink}" target="_blank" rel="noopener noreferrer" title="View post on Reddit">
                                     <img src="${escapeHTML(obj.thumbnail)}" alt="Thumbnail" onerror="hideThumbnail(this)">
                                 </a>
                             </figure>
@@ -377,7 +377,7 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
             }
             html += `
                             <p>
-                                <a href="${link}" title="View comment on Reddit" class="has-text-light has-text-weight-bold">Comment Link</a> 
+                                <a href="${link}" target="_blank" rel="noopener noreferrer" title="View comment on Reddit" class="has-text-light has-text-weight-bold">Comment Link</a> 
                                 <span class="has-text-grey-light is-size-7 score">[Score: ${scoreText}]</span>
                             </p>
                         </div>
@@ -389,7 +389,7 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
         } else {  // Post
             html += `
                             <p>
-                                <a href="https://reddit.com${permalink}" title="View post on Reddit" class="has-text-light has-text-weight-bold">${escapeHTML(obj.title)}</a> 
+                                <a href="https://reddit.com${permalink}" target="_blank" rel="noopener noreferrer" title="View post on Reddit" class="has-text-light has-text-weight-bold">${escapeHTML(obj.title)}</a> 
                                 <span class="has-text-grey-light is-size-7 score">[Score: ${scoreText}]</span>
                             </p>
             `;
@@ -397,7 +397,7 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
                 const escapedUrl = escapeHTML(obj.url);
                 html += `
                             <p class="expand wrap">
-                                <a href="${escapedUrl}" title="View linked URL" class="has-text-danger">${escapedUrl}</a>
+                                <a href="${escapedUrl}" target="_blank" rel="noopener noreferrer" title="View linked URL" class="has-text-danger">${escapedUrl}</a>
                             </p>
                         </div>
                     </div>
@@ -440,11 +440,16 @@ function escapeHTML(str) {
         .replace(/'/g, "&#039;");
 }
 
-const markdownParser = SnuOwnd.getParser(null, SnuOwnd.getParser().extensions | SnuOwnd.MKDEXT_FENCED_CODE);
+const renderer = SnuOwnd.getRedditRenderer();
+renderer.context.link_attributes = function(e, n, t) {
+    e.s += ' target="_blank" rel="noopener noreferrer"';
+};
+const markdownParser = SnuOwnd.getParser(renderer, SnuOwnd.getParser().extensions | SnuOwnd.MKDEXT_FENCED_CODE);
 
 function formatText(text, use_markdown) {
     if (!text) return "";
     if (use_markdown) {
+        text = text.replace(/&amp;/g, "&");
         text = text.replace(/(^|\n)&gt; ?/g, "$1> ");
         text = markdownParser.render(text);
 
@@ -452,7 +457,7 @@ function formatText(text, use_markdown) {
         const regex = /!\[gif\]\(giphy\|(\w+)[\|\w]*\)/g;
         const matches = text.matchAll(regex);
         for (const match of matches) {
-            let link = `<a href="https://media.giphy.com/media/${match[1]}/giphy.gif">${match[0]}</a>`
+            let link = `<a href="https://media.giphy.com/media/${match[1]}/giphy.gif" target="_blank" rel="noopener noreferrer">${match[0]}</a>`;
             text = text.replace(match[0], link);
         }
 
