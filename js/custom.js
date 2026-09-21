@@ -383,12 +383,13 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
         `;
 
         if (showThumbnails) {
-            if ("thumbnail" in obj && typeof obj.thumbnail === "string" && obj.thumbnail.endsWith(".jpg")) {
+            if ("thumbnail" in obj && typeof obj.thumbnail === "string" && obj.thumbnail.startsWith("http")) {
+                const thumbUrl = escapeHTML(obj.thumbnail.replace(/&amp;/g, "&"));
                 html += `
                         <div class="media-left">
                             <figure class="image is-96x96">
                                 <a href="https://reddit.com${permalink}" target="_blank" rel="noopener noreferrer" title="View post on Reddit">
-                                    <img src="${escapeHTML(obj.thumbnail)}" alt="Thumbnail" onerror="hideThumbnail(this)">
+                                    <img src="${thumbUrl}" alt="Thumbnail" onerror="hideThumbnail(this)">
                                 </a>
                             </figure>
                         </div>
