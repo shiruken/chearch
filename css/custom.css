@@ -62,6 +62,13 @@ span.score {
 .closed {
     transform: rotate(45deg);
 }
+.expand img, .expand video {
+    max-width: 100%;
+    max-height: min(60vh, 500px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
 @media screen and (max-width: 768px) {
     /* Reduce spacing between level items on mobile */
     .level-left + .level-right {
