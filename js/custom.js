@@ -36,10 +36,10 @@ function getAccessToken() {
 }
 
 function clearAccessToken() {
-    if (localStorage.getItem("accessToken")) {
+    try {
         localStorage.removeItem("accessToken");
-        form.elements['accessToken'].value = "";
-    }
+    } catch {}
+    form.elements['accessToken'].value = "";
 }
 
 function getSettings() {
