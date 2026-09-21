@@ -2,6 +2,10 @@ document.addEventListener('DOMContentLoaded', function() {
     loadParams();
 }, false);
 
+window.addEventListener('popstate', () => {
+    loadParams();
+});
+
 const form = document.getElementById('searchForm');
 form.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -9,6 +13,7 @@ form.addEventListener('submit', (event) => {
 });
 
 function loadParams() {
+    form.reset();
     const urlParams = new URLSearchParams(window.location.search).entries();
     for (const param of urlParams) {
         try {
@@ -20,7 +25,10 @@ function loadParams() {
             } else {
                 value = param[1];
             }
-            document.getElementById(param[0]).value = value;
+            const el = document.getElementById(param[0]);
+            if (el) {
+                el.value = value;
+            }
         } catch(e) {
             console.log(e);
         }
@@ -163,9 +171,8 @@ async function search(form, until=-1) {
     
     if (until == -1) {	// Search
         document.getElementById("searchButton").classList.add("is-loading");
+        history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path);
     }
-
-    history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path);
     let accessToken = parseAccessTokenInput();
     localStorage.setItem("accessToken", accessToken);
     let exactAuthorMatch = form.elements['exactAuthorMatch'].checked;
