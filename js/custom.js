@@ -246,13 +246,18 @@ async function search(form, until=-1) {
             oldFetchButton.remove();
         }
 
+        const resultsContainer = document.getElementById("results");
+        const prevCardCount = resultsContainer.querySelectorAll(".card").length;
+
         const html = generateHTML(json.data, renderMarkdown, showThumbnails);
-        document.getElementById("results").insertAdjacentHTML("beforeend", html);
+        resultsContainer.insertAdjacentHTML("beforeend", html);
+
+        const newCards = Array.from(resultsContainer.querySelectorAll(".card")).slice(prevCardCount);
 
         // Highlight search terms
         const searchTerm = form.elements['q'].value;
-        if (highlight && searchTerm.length > 0) {
-            let instance = new Mark(document.querySelector("#results"));
+        if (highlight && searchTerm.length > 0 && newCards.length > 0) {
+            let instance = new Mark(newCards);
             if (!searchTerm.startsWith('"')) {
                 let searchArray = searchTerm.split(" ");
                 instance.mark(searchArray, {
