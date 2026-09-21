@@ -9,6 +9,10 @@ window.addEventListener('popstate', () => {
 const form = document.getElementById('searchForm');
 form.addEventListener('submit', (event) => {
     event.preventDefault();
+    const searchBtn = document.getElementById("searchButton");
+    if (searchBtn && (searchBtn.disabled || searchBtn.classList.contains("is-loading"))) {
+        return;
+    }
     ['since', 'until'].forEach(id => {
         const el = document.getElementById(id);
         if (el && el.dataset.autoPopulated === "true") {
@@ -257,6 +261,8 @@ let latestCurlCommand = "";
 let currentJsonBlobURL = null;
 let accumulatedResults = [];
 let copyTimeout;
+let activeSearchConfig = null;
+let currentSearchSessionId = 0;
 
 async function copyCurl(btnElement) {
     if (!latestCurlCommand) return;
@@ -293,8 +299,17 @@ async function ensureMinLoadingTime(startTime, minDuration = 500) {
 }
 
 async function search(form, until=-1, isRetry=false) {
+    if (until < 0 && !isRetry) {
+        currentSearchSessionId++;
+    }
+    const searchSessionId = currentSearchSessionId;
     
     if (until < 0) {    // New Search
+        const searchBtn = document.getElementById("searchButton");
+        if (searchBtn) {
+            searchBtn.disabled = true;
+            searchBtn.classList.add("is-loading");
+        }
         document.getElementById("results").innerHTML = "";
         accumulatedResults = [];
         if (until == -1) {
@@ -307,152 +322,173 @@ async function search(form, until=-1, isRetry=false) {
     } else {            // Fetch More
         const fetchBtn = document.getElementById("fetch-" + until);
         if (fetchBtn) {
+            fetchBtn.disabled = true;
             fetchBtn.classList.add("is-loading");
         }
     }
 
-    let min_score, max_score, since;
     let psURL;
     let path = "?";
-    if (form.elements['kind'].value == "submission") {
-        psURL = "https://api.pushshift.io/reddit/submission/search?html_decode=True";
-        path += "kind=submission";
+    let currentLimit = 100;
+
+    if (until >= 0 && activeSearchConfig) {
+        psURL = activeSearchConfig.psBaseURL + "&until=" + until;
+        currentLimit = activeSearchConfig.limit;
     } else {
-        psURL = "https://api.pushshift.io/reddit/comment/search?html_decode=True";
-        path += "kind=comment";
-    }
-
-    const authorEl = form.elements['author'];
-    const rawAuthor = authorEl.value.trim().replace(/^(\/)?u\//i, '');
-    if (rawAuthor !== '') {
-        authorEl.value = rawAuthor;
-        const encodedAuthor = encodeURIComponent(rawAuthor);
-        psURL += "&author=" + encodedAuthor;
-        if (form.elements['exactAuthorMatch'].checked) {
-            psURL += "&exact_author=true";
+        let min_score, max_score, since, formUntil;
+        if (form.elements['kind'].value == "submission") {
+            psURL = "https://api.pushshift.io/reddit/submission/search?html_decode=True";
+            path += "kind=submission";
+        } else {
+            psURL = "https://api.pushshift.io/reddit/comment/search?html_decode=True";
+            path += "kind=comment";
         }
-        path += "&author=" + encodedAuthor;
-    }
 
-    const subredditEl = form.elements['subreddit'];
-    const rawSubreddit = subredditEl.value.trim().replace(/^(\/)?r\//i, '');
-    if (rawSubreddit !== '') {
-        subredditEl.value = rawSubreddit;
-        const encodedSubreddit = encodeURIComponent(rawSubreddit);
-        psURL += "&subreddit=" + encodedSubreddit;
-        path += "&subreddit=" + encodedSubreddit;
-    }
-
-    const rawMinScore = form.elements['min_score'].value.trim();
-    if (rawMinScore !== '') {
-        const parsedMin = parseInt(rawMinScore, 10);
-        if (isNaN(parsedMin)) {
-            const minScoreEl = document.getElementById("min_score");
-            if (minScoreEl) {
-                minScoreEl.setCustomValidity("Please enter an integer");
-                minScoreEl.reportValidity();
+        const authorEl = form.elements['author'];
+        const rawAuthor = authorEl.value.trim().replace(/^(\/)?u\//i, '');
+        if (rawAuthor !== '') {
+            authorEl.value = rawAuthor;
+            const encodedAuthor = encodeURIComponent(rawAuthor);
+            psURL += "&author=" + encodedAuthor;
+            if (form.elements['exactAuthorMatch'].checked) {
+                psURL += "&exact_author=true";
             }
-            return;
+            path += "&author=" + encodedAuthor;
         }
-        min_score = parsedMin;
-        psURL += "&min_score=" + min_score;
-        path += "&min_score=" + min_score;
-    }
 
-    const rawMaxScore = form.elements['max_score'].value.trim();
-    if (rawMaxScore !== '') {
-        const parsedMax = parseInt(rawMaxScore, 10);
-        if (isNaN(parsedMax)) {
-            const maxScoreEl = document.getElementById("max_score");
-            if (maxScoreEl) {
-                maxScoreEl.setCustomValidity("Please enter an integer");
-                maxScoreEl.reportValidity();
-            }
-            return;
+        const subredditEl = form.elements['subreddit'];
+        const rawSubreddit = subredditEl.value.trim().replace(/^(\/)?r\//i, '');
+        if (rawSubreddit !== '') {
+            subredditEl.value = rawSubreddit;
+            const encodedSubreddit = encodeURIComponent(rawSubreddit);
+            psURL += "&subreddit=" + encodedSubreddit;
+            path += "&subreddit=" + encodedSubreddit;
         }
-        max_score = parsedMax;
-        psURL += "&max_score=" + max_score;
-        path += "&max_score=" + max_score;
-    }
 
-    if (min_score !== undefined && max_score !== undefined) {
-        if (max_score < min_score) {
-            const maxScoreEl = document.getElementById("max_score");
-            if (maxScoreEl) {
-                maxScoreEl.setCustomValidity("Please enter a value greater than or equal to 'Min Score'");
-                maxScoreEl.reportValidity();
-            }
-            return;
-        }
-    }
-
-    if (form.elements['since'].value.trim() !== '') {
-        const parsedSince = new Date(form.elements['since'].value).valueOf() / 1000;
-        if (!isNaN(parsedSince)) {
-            since = parsedSince;
-            psURL += "&since=" + since;
-            path += "&since=" + since;
-        }
-    }
-
-    if (until >= 0) {
-        psURL += "&until=" + until;
-    } else if (form.elements['until'].value.trim() !== '') {
-        const formUntil = new Date(form.elements['until'].value).valueOf() / 1000;
-        if (!isNaN(formUntil)) {
-            if (since !== undefined && formUntil <= since) {
-                const untilEl = document.getElementById("until");
-                if (untilEl) {
-                    untilEl.setCustomValidity("Please select a date later than the 'After' date");
-                    untilEl.reportValidity();
+        const rawMinScore = form.elements['min_score'].value.trim();
+        if (rawMinScore !== '') {
+            const parsedMin = parseInt(rawMinScore, 10);
+            if (isNaN(parsedMin)) {
+                const minScoreEl = document.getElementById("min_score");
+                if (minScoreEl) {
+                    minScoreEl.setCustomValidity("Please enter an integer");
+                    minScoreEl.reportValidity();
                 }
                 return;
             }
-            psURL += "&until=" + formUntil;
-            path += "&until=" + formUntil;
+            min_score = parsedMin;
+            psURL += "&min_score=" + min_score;
+            path += "&min_score=" + min_score;
         }
-    }
 
-    const queryVal = form.elements['q'].value.trim();
-    if (queryVal !== '') {
-        const encodedQuery = encodeURIComponent(queryVal);
-        if (form.elements['kind'].value == "submission" && queryVal.startsWith("t3_")) {
-            psURL += "&ids=" + encodedQuery;
-        } else if (form.elements['kind'].value == "comment" && queryVal.startsWith("t1_")) {
-            psURL += "&ids=" + encodedQuery;
+        const rawMaxScore = form.elements['max_score'].value.trim();
+        if (rawMaxScore !== '') {
+            const parsedMax = parseInt(rawMaxScore, 10);
+            if (isNaN(parsedMax)) {
+                const maxScoreEl = document.getElementById("max_score");
+                if (maxScoreEl) {
+                    maxScoreEl.setCustomValidity("Please enter an integer");
+                    maxScoreEl.reportValidity();
+                }
+                return;
+            }
+            max_score = parsedMax;
+            psURL += "&max_score=" + max_score;
+            path += "&max_score=" + max_score;
+        }
+
+        if (min_score !== undefined && max_score !== undefined) {
+            if (max_score < min_score) {
+                const maxScoreEl = document.getElementById("max_score");
+                if (maxScoreEl) {
+                    maxScoreEl.setCustomValidity("Please enter a value greater than or equal to 'Min Score'");
+                    maxScoreEl.reportValidity();
+                }
+                return;
+            }
+        }
+
+        if (form.elements['since'].value.trim() !== '') {
+            const parsedSince = new Date(form.elements['since'].value).valueOf() / 1000;
+            if (!isNaN(parsedSince)) {
+                since = parsedSince;
+                psURL += "&since=" + since;
+                path += "&since=" + since;
+            }
+        }
+
+        if (until >= 0) {
+            psURL += "&until=" + until;
+        } else if (form.elements['until'].value.trim() !== '') {
+            const parsedFormUntil = new Date(form.elements['until'].value).valueOf() / 1000;
+            if (!isNaN(parsedFormUntil)) {
+                if (since !== undefined && parsedFormUntil <= since) {
+                    const untilEl = document.getElementById("until");
+                    if (untilEl) {
+                        untilEl.setCustomValidity("Please select a date later than the 'After' date");
+                        untilEl.reportValidity();
+                    }
+                    return;
+                }
+                formUntil = parsedFormUntil;
+            }
+        }
+
+        const queryVal = form.elements['q'].value.trim();
+        if (queryVal !== '') {
+            const encodedQuery = encodeURIComponent(queryVal);
+            if (form.elements['kind'].value == "submission" && queryVal.startsWith("t3_")) {
+                psURL += "&ids=" + encodedQuery;
+            } else if (form.elements['kind'].value == "comment" && queryVal.startsWith("t1_")) {
+                psURL += "&ids=" + encodedQuery;
+            } else {
+                psURL += "&q=" + encodedQuery;
+            }
+            path += "&q=" + encodedQuery;
+        }
+
+        const rawLimit = form.elements['limit'].value.trim();
+        if (rawLimit === '') {
+            currentLimit = 100;
+            psURL += "&limit=100";
+            path += "&limit=100";
         } else {
-            psURL += "&q=" + encodedQuery;
+            const limit = parseInt(rawLimit, 10);
+            const limitEl = document.getElementById("limit");
+            if (isNaN(limit) || String(limit) !== rawLimit) {
+                if (limitEl) {
+                    limitEl.setCustomValidity("Please enter an integer between 1 and 1000");
+                    limitEl.reportValidity();
+                }
+                return;
+            } else if (limit < 1 || limit > 1000) {
+                if (limitEl) {
+                    limitEl.setCustomValidity("Value must be between 1 and 1000");
+                    limitEl.reportValidity();
+                }
+                return;
+            }
+            if (limitEl) limitEl.setCustomValidity("");
+            currentLimit = limit;
+            psURL += "&limit=" + limit;
+            path += "&limit=" + limit;
         }
-        path += "&q=" + encodedQuery;
-    }
 
-    const rawLimit = form.elements['limit'].value.trim();
-    if (rawLimit === '') {
-        psURL += "&limit=100";
-        path += "&limit=100";
-    } else {
-        const limit = parseInt(rawLimit, 10);
-        const limitEl = document.getElementById("limit");
-        if (isNaN(limit) || String(limit) !== rawLimit) {
-            if (limitEl) {
-                limitEl.setCustomValidity("Please enter an integer between 1 and 1000");
-                limitEl.reportValidity();
+        if (until < 0) {
+            activeSearchConfig = {
+                psBaseURL: psURL,
+                limit: currentLimit,
+                searchTerm: queryVal,
+                highlight: form.elements['highlight'].checked
+            };
+            if (formUntil !== undefined) {
+                psURL += "&until=" + formUntil;
+                path += "&until=" + formUntil;
             }
-            return;
-        } else if (limit < 1 || limit > 1000) {
-            if (limitEl) {
-                limitEl.setCustomValidity("Value must be between 1 and 1000");
-                limitEl.reportValidity();
-            }
-            return;
         }
-        if (limitEl) limitEl.setCustomValidity("");
-        psURL += "&limit=" + limit;
-        path += "&limit=" + limit;
     }
     
     if (until < 0) {	// Search
-        document.getElementById("searchButton").classList.add("is-loading");
         if (until == -1) {
             history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path);
         }
@@ -480,7 +516,13 @@ async function search(form, until=-1, isRetry=false) {
 
     try {
         const json = await load(psURL, accessToken);
+        if (searchSessionId !== currentSearchSessionId) {
+            return;
+        }
         await ensureMinLoadingTime(searchStartTime);
+        if (searchSessionId !== currentSearchSessionId) {
+            return;
+        }
 
         if (!json || typeof json !== "object") {
             throw new Error("Invalid response from Pushshift API");
@@ -578,17 +620,39 @@ async function search(form, until=-1, isRetry=false) {
             oldFetchButton.remove();
         }
 
+        const seenIds = new Set(accumulatedResults.map(item => item && item.id).filter(Boolean));
+        const uniqueData = [];
+        for (const item of json.data) {
+            if (!item || !item.id) {
+                uniqueData.push(item);
+            } else if (!seenIds.has(item.id)) {
+                seenIds.add(item.id);
+                uniqueData.push(item);
+            }
+        }
+
+        const rawNextUntil = (json.data.length > 0 && json.data[json.data.length - 1].created_utc != null)
+            ? json.data[json.data.length - 1].created_utc
+            : null;
+
+        const hasMore = (json.data.length >= currentLimit) && (uniqueData.length > 0);
+        const isEnd = !hasMore && ((accumulatedResults.length + uniqueData.length) > 0);
+
         const resultsContainer = document.getElementById("results");
         const prevCardCount = resultsContainer.querySelectorAll(".card").length;
 
-        const html = generateHTML(json.data, renderMarkdown, showThumbnails);
+        const renderMarkdown = form.elements['renderMarkdown'].checked;
+        const showThumbnails = form.elements['showThumbnails'].checked;
+
+        const html = generateHTML(uniqueData, renderMarkdown, showThumbnails, hasMore, rawNextUntil, isEnd);
         resultsContainer.insertAdjacentHTML("beforeend", html);
 
         const newCards = Array.from(resultsContainer.querySelectorAll(".card")).slice(prevCardCount);
 
         // Highlight search terms
-        const searchTerm = form.elements['q'].value.trim();
-        if (highlight && searchTerm.length > 0 && newCards.length > 0) {
+        const searchTerm = (activeSearchConfig ? activeSearchConfig.searchTerm : form.elements['q'].value).trim();
+        const highlightSetting = activeSearchConfig ? activeSearchConfig.highlight : form.elements['highlight'].checked;
+        if (highlightSetting && searchTerm.length > 0 && newCards.length > 0) {
             let instance = new Mark(newCards);
             if (!searchTerm.startsWith('"')) {
                 let searchArray = searchTerm.split(/\s+/).filter(Boolean);
@@ -605,7 +669,7 @@ async function search(form, until=-1, isRetry=false) {
             }
         }
 
-        accumulatedResults = accumulatedResults.concat(json.data);
+        accumulatedResults = accumulatedResults.concat(uniqueData);
         const result_count = accumulatedResults.length;
 
         if (currentJsonBlobURL) {
@@ -660,28 +724,45 @@ async function search(form, until=-1, isRetry=false) {
         `;
     } finally {
         await ensureMinLoadingTime(searchStartTime);
-        document.getElementById("searchButton").classList.remove("is-loading");
-        if (until >= 0) {
-            const fetchBtn = document.getElementById("fetch-" + until);
-            if (fetchBtn) {
-                fetchBtn.classList.remove("is-loading");
+        if (searchSessionId === currentSearchSessionId) {
+            const searchBtn = document.getElementById("searchButton");
+            if (searchBtn) {
+                searchBtn.disabled = false;
+                searchBtn.classList.remove("is-loading");
+            }
+            if (until >= 0) {
+                const fetchBtn = document.getElementById("fetch-" + until);
+                if (fetchBtn) {
+                    fetchBtn.disabled = false;
+                    fetchBtn.classList.remove("is-loading");
+                }
             }
         }
     }
 }
 
 function fetchMore(until) {
+    const btn = document.getElementById("fetch-" + until);
+    if (btn) {
+        if (btn.disabled || btn.classList.contains("is-loading")) {
+            return;
+        }
+        btn.disabled = true;
+        btn.classList.add("is-loading");
+    }
     search(form, until);
 }
 
-function generateHTML(data, renderMarkdown, showThumbnails) {
+function generateHTML(data, renderMarkdown, showThumbnails, hasMore = true, nextUntil = null, isEnd = false) {
     let count = 0;
     let html = "";
-    let until = 2147483647;
+    let until = (nextUntil != null) ? nextUntil : 2147483647;
     
     data.forEach(obj => {
         count += 1;
-        until = obj.created_utc;
+        if (nextUntil == null && obj && obj.created_utc != null) {
+            until = obj.created_utc;
+        }
         
         let timestamp = "";
         let utcTimestamp = "";
@@ -812,10 +893,14 @@ function generateHTML(data, renderMarkdown, showThumbnails) {
 
     });
 
-    if (count > 0) {
+    if (hasMore && count > 0 && until != null && until < 2147483647) {
         html += `
             <button type="submit" class="button is-danger is-fullwidth my-5" 
             id="fetch-${until}" data-umami-event="more-button" onclick="fetchMore(${until})">Fetch More</button>
+        `;
+    } else if (isEnd) {
+        html += `
+            <p class="has-text-centered has-text-grey my-5 is-size-7" id="endOfResults">End of Results</p>
         `;
     }
 
