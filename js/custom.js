@@ -17,13 +17,39 @@ form.addEventListener('submit', (event) => {
         }
     });
     updateClearDateButtons();
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
     if (!validateDateRange()) {
         const untilEl = document.getElementById("until");
         if (untilEl) untilEl.reportValidity();
         return;
     }
+    if (!validateScoreRange()) {
+        const maxScoreEl = document.getElementById("max_score");
+        if (maxScoreEl) maxScoreEl.reportValidity();
+        return;
+    }
     search(form);
 });
+
+function validateScoreRange() {
+    const minEl = document.getElementById("min_score");
+    const maxEl = document.getElementById("max_score");
+    if (!minEl || !maxEl) return true;
+
+    if (minEl.value.trim() !== '' && maxEl.value.trim() !== '') {
+        const minVal = parseInt(minEl.value.trim(), 10);
+        const maxVal = parseInt(maxEl.value.trim(), 10);
+        if (!isNaN(minVal) && !isNaN(maxVal) && maxVal < minVal) {
+            maxEl.setCustomValidity("Please enter a value greater than or equal to 'Min Score'");
+            return false;
+        }
+    }
+    maxEl.setCustomValidity("");
+    return true;
+}
 
 function validateDateRange() {
     const sinceEl = document.getElementById("since");
@@ -33,7 +59,7 @@ function validateDateRange() {
     if (sinceEl.value && untilEl.value) {
         const sinceTime = new Date(sinceEl.value).getTime();
         const untilTime = new Date(untilEl.value).getTime();
-        if (untilTime <= sinceTime) {
+        if (!isNaN(sinceTime) && !isNaN(untilTime) && untilTime <= sinceTime) {
             untilEl.setCustomValidity("Please select a date later than the 'After' date");
             return false;
         }
@@ -70,28 +96,43 @@ function updateClearDateButtons() {
 
 function loadParams() {
     form.reset();
+    getAccessToken();
+    getSettings();
     const urlParams = new URLSearchParams(window.location.search).entries();
     for (const param of urlParams) {
         try {
             let value;
             if (param[0] == "until" || param[0] == "since") {
-                value = new Date(param[1] * 1000);
-                const offset = new Date().getTimezoneOffset() * 60000;
-                value = new Date(value - offset).toISOString().slice(0, 16);
+                const num = Number(param[1]);
+                if (!isNaN(num)) {
+                    const date = new Date(num * 1000);
+                    if (!isNaN(date.getTime())) {
+                        const offset = date.getTimezoneOffset() * 60000;
+                        value = new Date(date.getTime() - offset).toISOString().slice(0, 16);
+                    }
+                }
+            } else if (param[0] == "author") {
+                value = param[1].replace(/^(\/)?u\//i, '');
+            } else if (param[0] == "subreddit") {
+                value = param[1].replace(/^(\/)?r\//i, '');
             } else {
                 value = param[1];
             }
-            const el = document.getElementById(param[0]);
-            if (el) {
-                el.value = value;
+            const targetId = param[0] === "ids" ? "q" : param[0];
+            const el = document.getElementById(targetId);
+            if (el && value !== undefined) {
+                if (el.type === "checkbox") {
+                    el.checked = (value === "true" || value === "1");
+                } else {
+                    el.value = value;
+                }
             }
         } catch(e) {
             console.log(e);
         }
     }
-    getAccessToken();
-    getSettings();
     validateDateRange();
+    validateScoreRange();
     updateClearDateButtons();
 }
 
@@ -166,6 +207,19 @@ settingKeys.forEach(id => {
         });
     }
 });
+
+['min_score', 'max_score'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('input', validateScoreRange);
+        el.addEventListener('change', validateScoreRange);
+    }
+});
+
+const limitEl = document.getElementById('limit');
+if (limitEl) {
+    limitEl.addEventListener('input', () => limitEl.setCustomValidity(''));
+}
 
 function getSettings() {
     settingKeys.forEach(id => {
@@ -246,52 +300,86 @@ async function search(form, until=-1) {
         psURL = "https://api.pushshift.io/reddit/comment/search?html_decode=True";
         path += "kind=comment";
     }
-    if (form.elements['author'].value != '') {
-        psURL += "&author=" + form.elements['author'].value;
+
+    const authorEl = form.elements['author'];
+    const rawAuthor = authorEl.value.trim().replace(/^(\/)?u\//i, '');
+    if (rawAuthor !== '') {
+        authorEl.value = rawAuthor;
+        const encodedAuthor = encodeURIComponent(rawAuthor);
+        psURL += "&author=" + encodedAuthor;
         if (form.elements['exactAuthorMatch'].checked) {
             psURL += "&exact_author=true";
         }
-        path  += "&author=" + form.elements['author'].value;
+        path += "&author=" + encodedAuthor;
     }
-    if (form.elements['subreddit'].value != '') {
-        psURL += "&subreddit=" + form.elements['subreddit'].value;
-        path  += "&subreddit=" + form.elements['subreddit'].value;
+
+    const subredditEl = form.elements['subreddit'];
+    const rawSubreddit = subredditEl.value.trim().replace(/^(\/)?r\//i, '');
+    if (rawSubreddit !== '') {
+        subredditEl.value = rawSubreddit;
+        const encodedSubreddit = encodeURIComponent(rawSubreddit);
+        psURL += "&subreddit=" + encodedSubreddit;
+        path += "&subreddit=" + encodedSubreddit;
     }
-    if (form.elements['min_score'].value != '') {
-        min_score = form.elements['min_score'].value;
-        if (isNaN(min_score) || min_score % 1 !== 0) {
-            document.getElementById("apiInfo").innerHTML = "'Min Score' must be an integer";
+
+    const rawMinScore = form.elements['min_score'].value.trim();
+    if (rawMinScore !== '') {
+        const parsedMin = parseInt(rawMinScore, 10);
+        if (isNaN(parsedMin)) {
+            const minScoreEl = document.getElementById("min_score");
+            if (minScoreEl) {
+                minScoreEl.setCustomValidity("Please enter an integer");
+                minScoreEl.reportValidity();
+            }
             return;
         }
+        min_score = parsedMin;
         psURL += "&min_score=" + min_score;
-        path  += "&min_score=" + min_score;
+        path += "&min_score=" + min_score;
     }
-    if (form.elements['max_score'].value != '') {
-        max_score = form.elements['max_score'].value;
-        if (isNaN(max_score) || max_score % 1 !== 0) {
-            document.getElementById("apiInfo").innerHTML = "'Max Score' must be an integer";
+
+    const rawMaxScore = form.elements['max_score'].value.trim();
+    if (rawMaxScore !== '') {
+        const parsedMax = parseInt(rawMaxScore, 10);
+        if (isNaN(parsedMax)) {
+            const maxScoreEl = document.getElementById("max_score");
+            if (maxScoreEl) {
+                maxScoreEl.setCustomValidity("Please enter an integer");
+                maxScoreEl.reportValidity();
+            }
             return;
         }
+        max_score = parsedMax;
         psURL += "&max_score=" + max_score;
-        path  += "&max_score=" + max_score;
+        path += "&max_score=" + max_score;
     }
-    if (min_score && max_score) {
+
+    if (min_score !== undefined && max_score !== undefined) {
         if (max_score < min_score) {
-            document.getElementById("apiInfo").innerHTML = "'Max Score' must be greater than 'Min Score'";
+            const maxScoreEl = document.getElementById("max_score");
+            if (maxScoreEl) {
+                maxScoreEl.setCustomValidity("Please enter a value greater than or equal to 'Min Score'");
+                maxScoreEl.reportValidity();
+            }
             return;
         }
     }
-    if (form.elements['since'].value != '') {
-        since = new Date(form.elements['since'].value).valueOf() / 1000;
-        psURL += "&since=" + since;
-        path  += "&since=" + since;
+
+    if (form.elements['since'].value.trim() !== '') {
+        const parsedSince = new Date(form.elements['since'].value).valueOf() / 1000;
+        if (!isNaN(parsedSince)) {
+            since = parsedSince;
+            psURL += "&since=" + since;
+            path += "&since=" + since;
+        }
     }
+
     if (until >= 0) {
         psURL += "&until=" + until;
-    } else if (form.elements['until'].value != '') {
+    } else if (form.elements['until'].value.trim() !== '') {
         const formUntil = new Date(form.elements['until'].value).valueOf() / 1000;
-        if (since) {
-            if (formUntil <= since) {
+        if (!isNaN(formUntil)) {
+            if (since !== undefined && formUntil <= since) {
                 const untilEl = document.getElementById("until");
                 if (untilEl) {
                     untilEl.setCustomValidity("Please select a date later than the 'After' date");
@@ -299,38 +387,47 @@ async function search(form, until=-1) {
                 }
                 return;
             }
+            psURL += "&until=" + formUntil;
+            path += "&until=" + formUntil;
         }
-        psURL += "&until=" + formUntil;
-        path  += "&until=" + formUntil;
     }
-    if (form.elements['q'].value != '') {
-        const queryVal = form.elements['q'].value.trim();
+
+    const queryVal = form.elements['q'].value.trim();
+    if (queryVal !== '') {
+        const encodedQuery = encodeURIComponent(queryVal);
         if (form.elements['kind'].value == "submission" && queryVal.startsWith("t3_")) {
-            psURL += "&ids=" + encodeURIComponent(queryVal);
+            psURL += "&ids=" + encodedQuery;
         } else if (form.elements['kind'].value == "comment" && queryVal.startsWith("t1_")) {
-            psURL += "&ids=" + encodeURIComponent(queryVal);
+            psURL += "&ids=" + encodedQuery;
         } else {
-            psURL += "&q=" + encodeURIComponent(queryVal);
+            psURL += "&q=" + encodedQuery;
         }
-        path  += "&q=" + encodeURIComponent(queryVal);
+        path += "&q=" + encodedQuery;
     }
-    if (form.elements['limit'].value == '') {
+
+    const rawLimit = form.elements['limit'].value.trim();
+    if (rawLimit === '') {
         psURL += "&limit=100";
-        path  += "&limit=100";
+        path += "&limit=100";
     } else {
-        let limit = form.elements['limit'].value;
-        if (isNaN(limit) || limit % 1 !== 0) {
-            document.getElementById("apiInfo").innerHTML = "'Number to Request' must be an integer";
+        const limit = parseInt(rawLimit, 10);
+        const limitEl = document.getElementById("limit");
+        if (isNaN(limit) || String(limit) !== rawLimit) {
+            if (limitEl) {
+                limitEl.setCustomValidity("Please enter an integer between 1 and 1000");
+                limitEl.reportValidity();
+            }
             return;
-        } else if (limit < 1) {
-            document.getElementById("apiInfo").innerHTML = "'Number to Request' must be a positive integer";
-            return;
-        } else if (limit > 1000) {
-            document.getElementById("apiInfo").innerHTML = "'Number to Request' must be less than 1000";
+        } else if (limit < 1 || limit > 1000) {
+            if (limitEl) {
+                limitEl.setCustomValidity("Value must be between 1 and 1000");
+                limitEl.reportValidity();
+            }
             return;
         }
+        if (limitEl) limitEl.setCustomValidity("");
         psURL += "&limit=" + limit;
-        path  += "&limit=" + limit;
+        path += "&limit=" + limit;
     }
     
     if (until < 0) {	// Search
@@ -353,8 +450,9 @@ async function search(form, until=-1) {
     } catch {}
 
     const safeUrl = psURL.replaceAll("'", "%27");
+    const safeToken = accessToken ? accessToken.replaceAll("'", "'\\''") : "";
     latestCurlCommand = accessToken 
-        ? `curl '${safeUrl}' \\\n  -H 'Authorization: Bearer ${accessToken}'`
+        ? `curl '${safeUrl}' \\\n  -H 'Authorization: Bearer ${safeToken}'`
         : `curl '${safeUrl}'`;
 
     const searchStartTime = Date.now();
@@ -442,11 +540,11 @@ async function search(form, until=-1) {
         const newCards = Array.from(resultsContainer.querySelectorAll(".card")).slice(prevCardCount);
 
         // Highlight search terms
-        const searchTerm = form.elements['q'].value;
+        const searchTerm = form.elements['q'].value.trim();
         if (highlight && searchTerm.length > 0 && newCards.length > 0) {
             let instance = new Mark(newCards);
             if (!searchTerm.startsWith('"')) {
-                let searchArray = searchTerm.split(" ");
+                let searchArray = searchTerm.split(/\s+/).filter(Boolean);
                 instance.mark(searchArray, {
                     "wildcards": "enabled",
                     "accuracy": "complementary"
