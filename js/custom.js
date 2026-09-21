@@ -50,19 +50,31 @@ function clearAccessToken() {
     form.elements['accessToken'].value = "";
 }
 
+const settingKeys = ["exactAuthorMatch", "renderMarkdown", "highlight", "showThumbnails"];
+
+settingKeys.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener("change", () => {
+            try {
+                localStorage.setItem(id, el.checked);
+            } catch {}
+        });
+    }
+});
+
 function getSettings() {
-    if (localStorage.getItem("exactAuthorMatch")) {
-        document.getElementById("exactAuthorMatch").checked = (localStorage.getItem("exactAuthorMatch") === "true");
-    }
-    if (localStorage.getItem("renderMarkdown")) {
-        document.getElementById("renderMarkdown").checked = (localStorage.getItem("renderMarkdown") === "true");
-    }
-    if (localStorage.getItem("highlight")) {
-        document.getElementById("highlight").checked = (localStorage.getItem("highlight") === "true");
-    }
-    if (localStorage.getItem("showThumbnails")) {
-        document.getElementById("showThumbnails").checked = (localStorage.getItem("showThumbnails") === "true");
-    }
+    settingKeys.forEach(id => {
+        try {
+            const val = localStorage.getItem(id);
+            if (val !== null) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.checked = (val === "true");
+                }
+            }
+        } catch {}
+    });
 }
 
 async function search(form, until=-1) {
@@ -174,15 +186,17 @@ async function search(form, until=-1) {
         history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path);
     }
     let accessToken = parseAccessTokenInput();
-    localStorage.setItem("accessToken", accessToken);
     let exactAuthorMatch = form.elements['exactAuthorMatch'].checked;
-    localStorage.setItem("exactAuthorMatch", exactAuthorMatch);
     let renderMarkdown = form.elements['renderMarkdown'].checked;
-    localStorage.setItem("renderMarkdown", renderMarkdown);
     let highlight = form.elements['highlight'].checked;
-    localStorage.setItem("highlight", highlight);
     let showThumbnails = form.elements['showThumbnails'].checked;
-    localStorage.setItem("showThumbnails", showThumbnails);
+    try {
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("exactAuthorMatch", exactAuthorMatch);
+        localStorage.setItem("renderMarkdown", renderMarkdown);
+        localStorage.setItem("highlight", highlight);
+        localStorage.setItem("showThumbnails", showThumbnails);
+    } catch {}
 
     try {
         const json = await load(psURL, accessToken);
