@@ -15,7 +15,7 @@ function loadParams() {
             let value;
             if (param[0] == "until" || param[0] == "since") {
                 value = new Date(param[1] * 1000);
-                offset = new Date().getTimezoneOffset() * 60000;
+                const offset = new Date().getTimezoneOffset() * 60000;
                 value = new Date(value - offset).toISOString().slice(0, -1);
             } else {
                 value = param[1];
@@ -241,11 +241,11 @@ async function search(form, until=-1) {
             throw new Error("Missing data array in response");
         }
 
-        html = generateHTML(json.data, renderMarkdown, showThumbnails);
+        const html = generateHTML(json.data, renderMarkdown, showThumbnails);
         document.getElementById("results").innerHTML += html;
 
         // Highlight search terms
-        searchTerm = form.elements['q'].value;
+        const searchTerm = form.elements['q'].value;
         if (highlight && searchTerm.length > 0) {
             let instance = new Mark(document.querySelector("#results"));
             if (!searchTerm.startsWith('"')) {
