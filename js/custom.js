@@ -440,10 +440,13 @@ function escapeHTML(str) {
         .replace(/'/g, "&#039;");
 }
 
+const markdownParser = SnuOwnd.getParser(null, SnuOwnd.getParser().extensions | SnuOwnd.MKDEXT_FENCED_CODE);
+
 function formatText(text, use_markdown) {
     if (!text) return "";
     if (use_markdown) {
-        text = SnuOwnd.getParser().render(text);
+        text = text.replace(/(^|\n)&gt; ?/g, "$1> ");
+        text = markdownParser.render(text);
 
         // Link native Giphy embeds
         const regex = /!\[gif\]\(giphy\|(\w+)[\|\w]*\)/g;

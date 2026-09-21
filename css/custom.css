@@ -15,7 +15,9 @@
     object-fit: cover;
 }
 .markdown, .markdown strong, .markdown h1, .markdown h2,
-.markdown h3, .markdown code, .markdown table thead tr th {
+.markdown h3, .markdown h4, .markdown h5, .markdown h6,
+.markdown ul, .markdown ol, .markdown li,
+.markdown code, .markdown pre, .markdown table thead tr th {
     color: #F5F5F5; /* .has-text-light */
 }
 .markdown a, .markdown a strong {
@@ -26,6 +28,25 @@
 }
 .markdown code, .markdown pre {
     background-color: #4A4A4A; /* .has-background-grey-dark */
+}
+.markdown pre code {
+    background-color: transparent;
+    padding: 0;
+}
+.markdown blockquote {
+    background-color: #2D3748;
+    border-left: 4px solid #4A5568;
+    color: #F5F5F5;
+}
+.markdown blockquote p {
+    color: #F5F5F5;
+}
+.markdown hr {
+    background-color: #4A5568;
+}
+.markdown table, .markdown table th, .markdown table td {
+    color: #F5F5F5;
+    border-color: #4A5568;
 }
 span.score {
     white-space: nowrap;
