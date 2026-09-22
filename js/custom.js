@@ -900,7 +900,7 @@ function generateHTML(data, renderMarkdown, showThumbnails, hasMore = true, next
             `;
         } else {  // Post
             const formattedSelftext = formatText(obj.selftext, renderMarkdown);
-            const mediaMargin = (!obj.is_self || !formattedSelftext) ? "mb-3" : "mb-2";
+            const mediaMargin = !formattedSelftext ? "mb-3" : "mb-2";
 
             html += `
                     <div class="media ${mediaMargin}">
@@ -932,16 +932,14 @@ function generateHTML(data, renderMarkdown, showThumbnails, hasMore = true, next
                             <p class="expand wrap">
                                 <a href="${escapedUrl}" target="_blank" rel="noopener noreferrer" title="View linked URL" class="has-text-danger">${escapedUrl}</a>
                             </p>
-                        </div>
-                    </div>
                 `;
-            } else {  // Self Post
-                html += `
+            }
+
+            html += `
                         </div>
                     </div>
                     ${formattedSelftext ? `<div class="content mb-3 markdown expand wrap">${formattedSelftext}</div>` : ""}
-                `;
-            }
+            `;
         }
 
         html += `
