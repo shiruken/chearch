@@ -193,6 +193,7 @@ function loadParams() {
     validateDateRange();
     validateScoreRange();
     updateClearDateButtons();
+    updateKindUI();
 }
 
 function getAccessToken() {
@@ -225,6 +226,13 @@ settingKeys.forEach(id => {
             try {
                 localStorage.setItem(id, el.checked);
             } catch {}
+            if (id === "showThumbnails") {
+                updateThumbnailsVisibility();
+            } else if (id === "highlight") {
+                updateHighlighting();
+            } else if (id === "renderMarkdown") {
+                updateMarkdownRendering();
+            }
         });
     }
 });
@@ -288,6 +296,11 @@ if (limitEl) {
     limitEl.addEventListener('input', () => limitEl.setCustomValidity(''));
 }
 
+const kindEl = document.getElementById('kind');
+if (kindEl) {
+    kindEl.addEventListener('change', updateKindUI);
+}
+
 const tokenEl = document.getElementById('accessToken');
 if (tokenEl) {
     tokenEl.addEventListener('focus', () => {
@@ -310,6 +323,133 @@ function getSettings() {
             }
         } catch {}
     });
+    updateThumbnailsVisibility();
+}
+
+function updateKindUI() {
+    const kindEl = document.getElementById("kind");
+    const showThumbnailsField = document.getElementById("showThumbnailsField");
+    const showThumbnailsEl = document.getElementById("showThumbnails");
+    if (!kindEl || !showThumbnailsField) return;
+    const isComment = (kindEl.value === "comment");
+    if (isComment) {
+        showThumbnailsField.classList.add("is-hidden-contextual");
+    } else {
+        showThumbnailsField.classList.remove("is-hidden-contextual");
+    }
+    if (showThumbnailsEl) {
+        showThumbnailsEl.disabled = isComment;
+        showThumbnailsEl.setAttribute("aria-hidden", isComment ? "true" : "false");
+    }
+}
+
+function updateThumbnailsVisibility() {
+    const resultsEl = document.getElementById("results");
+    const showThumbnailsEl = document.getElementById("showThumbnails");
+    if (!resultsEl || !showThumbnailsEl) return;
+    if (showThumbnailsEl.checked) {
+        resultsEl.classList.remove("hide-thumbnails");
+    } else {
+        resultsEl.classList.add("hide-thumbnails");
+    }
+}
+
+function applySearchHighlighting(targetElements, term) {
+    if (!term || targetElements.length === 0) return;
+    if (typeof Mark === "undefined") return;
+    let instance = new Mark(targetElements);
+    if (!term.startsWith('"')) {
+        let searchArray = term
+            .split(/[\s,]+/)
+            .filter(token => token && !token.startsWith('-') && token !== '|' && token !== '+')
+            .map(token => token.replace(/^\+/, ''))
+            .filter(Boolean);
+        if (searchArray.length > 0) {
+            instance.mark(searchArray, {
+                "wildcards": "enabled",
+                "accuracy": "complementary"
+            });
+        }
+    } else {
+        let cleanTerm = term.replaceAll('"', "");
+        instance.mark(cleanTerm, {
+            "accuracy": "partially",
+            "separateWordSearch": false
+        });
+    }
+}
+
+function removeSearchHighlighting(targetElements) {
+    if (targetElements.length === 0) return;
+    if (typeof Mark === "undefined") return;
+    let instance = new Mark(targetElements);
+    instance.unmark();
+}
+
+function updateHighlighting() {
+    const highlightEl = document.getElementById("highlight");
+    const resultsContainer = document.getElementById("results");
+    if (!highlightEl || !resultsContainer) return;
+
+    const allCards = Array.from(resultsContainer.querySelectorAll(".card"));
+    if (allCards.length === 0) return;
+
+    if (activeSearchConfig) {
+        activeSearchConfig.highlight = highlightEl.checked;
+    }
+
+    removeSearchHighlighting(allCards);
+    if (highlightEl.checked) {
+        const searchTerm = (activeSearchConfig ? activeSearchConfig.searchTerm : form.elements['q'].value).trim();
+        applySearchHighlighting(allCards, searchTerm);
+    }
+}
+
+function injectMediaExpanderButtons(cards) {
+    const extensions = [".jpg", ".jpeg", ".png", ".gif", ".gifv", ".mp4"];
+    for (const card of cards) {
+        const links = card.querySelectorAll(".expand a");
+        for (const link of links) {
+            if (link.nextElementSibling == null || link.nextElementSibling.tagName != "BUTTON") {
+                const url = link.href;
+                if (extensions.some(extension => url.includes(extension))) {
+                    const button = document.createElement("button");
+                    button.classList.add("delete", "closed");
+                    button.setAttribute("onclick", "directExpand(this)");
+                    link.after(button);
+                }
+            }
+        }
+    }
+}
+
+function updateMarkdownRendering() {
+    const renderMarkdownEl = document.getElementById("renderMarkdown");
+    const resultsContainer = document.getElementById("results");
+    if (!renderMarkdownEl || !resultsContainer || accumulatedResults.length === 0) return;
+
+    const renderMarkdown = renderMarkdownEl.checked;
+    const allCards = Array.from(resultsContainer.querySelectorAll(".card"));
+    if (allCards.length === 0) return;
+
+    const objMap = new Map(accumulatedResults.map(item => [item.id, item]));
+
+    for (const card of allCards) {
+        const cardId = card.dataset.id || card.id;
+        const obj = objMap.get(cardId);
+        if (!obj) continue;
+
+        const rawText = ("link_id" in obj) ? obj.body : obj.selftext;
+        if (!rawText) continue;
+
+        const markdownContainer = card.querySelector(".content.markdown");
+        if (markdownContainer) {
+            markdownContainer.innerHTML = formatText(rawText, renderMarkdown);
+        }
+    }
+
+    injectMediaExpanderButtons(allCards);
+    updateHighlighting();
 }
 
 let latestCurlCommand = "";
@@ -701,6 +841,7 @@ async function search(form, until=-1, isRetry=false) {
 
         const html = generateHTML(uniqueData, renderMarkdown, showThumbnails, hasMore, rawNextUntil, isEnd);
         resultsContainer.insertAdjacentHTML("beforeend", html);
+        updateThumbnailsVisibility();
 
         const newCards = Array.from(resultsContainer.querySelectorAll(".card")).slice(prevCardCount);
 
@@ -708,26 +849,7 @@ async function search(form, until=-1, isRetry=false) {
         const searchTerm = (activeSearchConfig ? activeSearchConfig.searchTerm : form.elements['q'].value).trim();
         const highlightSetting = activeSearchConfig ? activeSearchConfig.highlight : form.elements['highlight'].checked;
         if (highlightSetting && searchTerm.length > 0 && newCards.length > 0) {
-            let instance = new Mark(newCards);
-            if (!searchTerm.startsWith('"')) {
-                let searchArray = searchTerm
-                    .split(/[\s,]+/)
-                    .filter(token => token && !token.startsWith('-') && token !== '|' && token !== '+')
-                    .map(token => token.replace(/^\+/, ''))
-                    .filter(Boolean);
-                if (searchArray.length > 0) {
-                    instance.mark(searchArray, {
-                        "wildcards": "enabled",
-                        "accuracy": "complementary"
-                    });
-                }
-            } else {
-                let term = searchTerm.replaceAll('"', "");
-                instance.mark(term, {
-                    "accuracy": "partially",
-                    "separateWordSearch": false
-                });
-            }
+            applySearchHighlighting(newCards, searchTerm);
         }
 
         accumulatedResults = accumulatedResults.concat(uniqueData);
@@ -755,21 +877,7 @@ async function search(form, until=-1, isRetry=false) {
         `;
 
         // Inject buttons for expanding linked media
-        const extensions = [".jpg", ".jpeg", ".png", ".gif", ".gifv", ".mp4"];
-        for (const card of newCards) {
-            const links = card.querySelectorAll(".expand a");
-            for (const link of links) {
-                if (link.nextElementSibling == null || link.nextElementSibling.tagName != "BUTTON") {
-                    const url = link.href;
-                    if (extensions.some(extension => url.includes(extension))) {
-                        const button = document.createElement("button");
-                        button.classList.add("delete", "closed");
-                        button.setAttribute("onclick", "directExpand(this)");
-                        link.after(button);
-                    }
-                }
-            }
-        }
+        injectMediaExpanderButtons(newCards);
 
     } catch (e) {
         await ensureMinLoadingTime(searchStartTime);
@@ -870,7 +978,7 @@ function generateHTML(data, renderMarkdown, showThumbnails, hasMore = true, next
         }
 
         html += `
-            <div class="card has-text-grey-light my-4">
+            <div class="card has-text-grey-light my-4" id="${escapeHTML(obj.id)}" data-id="${escapeHTML(obj.id)}">
                 <div class="card-content">
                     <div class="content mb-3">
                         <nav class="level">
@@ -906,7 +1014,7 @@ function generateHTML(data, renderMarkdown, showThumbnails, hasMore = true, next
                     <div class="media ${mediaMargin}">
             `;
 
-            if (showThumbnails && "thumbnail" in obj && typeof obj.thumbnail === "string" && obj.thumbnail.startsWith("http")) {
+            if ("thumbnail" in obj && typeof obj.thumbnail === "string" && obj.thumbnail.startsWith("http")) {
                 const thumbUrl = escapeHTML(obj.thumbnail.replace(/&amp;/g, "&"));
                 html += `
                         <div class="media-left">

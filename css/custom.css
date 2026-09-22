@@ -76,6 +76,18 @@ span.score {
     height: auto;
     object-fit: contain;
 }
+#results.hide-thumbnails .media-left {
+    display: none;
+}
+#showThumbnailsField.is-hidden-contextual {
+    display: none;
+}
+@media screen and (min-width: 769px) {
+    #showThumbnailsField.is-hidden-contextual {
+        display: block !important;
+        visibility: hidden !important;
+    }
+}
 #apiInfo a.has-text-grey-light {
     transition: color 0.15s ease-in-out;
 }
