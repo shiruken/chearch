@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     loadParams();
+    initSearchTips();
 }, false);
 
 window.addEventListener('popstate', () => {
@@ -94,6 +95,60 @@ function updateClearDateButtons() {
             } else if (document.activeElement !== el) {
                 btn.classList.remove('is-hidden');
             }
+        }
+    });
+}
+
+function initSearchTips() {
+    const btn = document.getElementById("searchTipsBtn");
+    const wrapper = document.getElementById("searchTipsWrapper");
+    const popup = document.getElementById("searchTipsPopup");
+    const closeBtn = document.getElementById("searchTipsCloseBtn");
+    if (!btn || !wrapper) return;
+
+    const closeTips = (restoreFocus = false) => {
+        wrapper.classList.remove("is-open");
+        btn.setAttribute("aria-expanded", "false");
+        btn.blur();
+        if (restoreFocus) {
+            btn.focus();
+        }
+    };
+
+    btn.addEventListener("click", (e) => {
+        if (e && typeof e.stopPropagation === "function") {
+            e.stopPropagation();
+        }
+        const isOpen = wrapper.classList.toggle("is-open");
+        btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener("click", (e) => {
+            if (e && typeof e.stopPropagation === "function") {
+                e.stopPropagation();
+            }
+            closeTips(true);
+        });
+    }
+
+    wrapper.addEventListener("mouseleave", () => {
+        if (typeof window !== "undefined" && window.innerWidth > 768) {
+            closeTips();
+        }
+    });
+
+    document.addEventListener("click", (e) => {
+        if (wrapper.classList.contains("is-open")) {
+            if (popup && !popup.contains(e.target) && !btn.contains(e.target)) {
+                closeTips();
+            }
+        }
+    });
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && wrapper.classList.contains("is-open")) {
+            closeTips(true);
         }
     });
 }
@@ -655,11 +710,17 @@ async function search(form, until=-1, isRetry=false) {
         if (highlightSetting && searchTerm.length > 0 && newCards.length > 0) {
             let instance = new Mark(newCards);
             if (!searchTerm.startsWith('"')) {
-                let searchArray = searchTerm.split(/\s+/).filter(Boolean);
-                instance.mark(searchArray, {
-                    "wildcards": "enabled",
-                    "accuracy": "complementary"
-                });
+                let searchArray = searchTerm
+                    .split(/[\s,]+/)
+                    .filter(token => token && !token.startsWith('-') && token !== '|' && token !== '+')
+                    .map(token => token.replace(/^\+/, ''))
+                    .filter(Boolean);
+                if (searchArray.length > 0) {
+                    instance.mark(searchArray, {
+                        "wildcards": "enabled",
+                        "accuracy": "complementary"
+                    });
+                }
             } else {
                 let term = searchTerm.replaceAll('"', "");
                 instance.mark(term, {
