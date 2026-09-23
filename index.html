@@ -134,16 +134,20 @@
                                                 <span class="tip-desc"><strong>Excludes</strong> the term (NOT)</span>
                                             </li>
                                             <li>
-                                                <span class="tip-example"><code>t3_...</code> / <code>t1_...</code></span>
-                                                <span class="tip-desc">Direct <strong>post / comment ID</strong></span>
+                                                <span class="tip-example"><code>reddit.com/...</code><br><code class="mt-1 is-inline-block">t3_...</code></span>
+                                                <span class="tip-desc"><strong>Fetches</strong> by <strong>direct link</strong><br><span class="mt-1 is-inline-block">or <strong>thing ID</strong></span></span>
                                             </li>
                                         </ul>
                                     </div>
                                 </div>
                             </div>
                             <div class="control">
-                                <input id="q" name="q" type="text" class="input" placeholder="Query or Reddit Object Fullname">
+                                <input id="q" name="q" type="text" class="input" placeholder="Search query, Reddit URL, or ID">
                             </div>
+                            <p class="help is-danger is-hidden mt-1 is-flex is-align-items-center" id="qMismatchHelp" role="alert">
+                                <span id="qMismatchText"></span>
+                                <a href="#" id="qMismatchLink" class="has-text-danger has-text-weight-semibold ml-2" style="text-decoration: underline;"></a>
+                            </p>
                         </div>
                     </div>
                     <div class="field my-3">

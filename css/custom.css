@@ -279,3 +279,11 @@ span.score {
         padding: 0.4rem 0;
     }
 }
+
+#qMismatchHelp {
+    font-size: 0.75rem;
+    line-height: 1.25;
+}
+#qMismatchHelp a:hover {
+    color: #EE1742 !important;
+}

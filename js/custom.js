@@ -153,14 +153,151 @@ function initSearchTips() {
     });
 }
 
+function parseRedditInput(input) {
+    if (!input || typeof input !== "string") return null;
+    let trimmed = input.trim();
+    if (!trimmed) return null;
+
+    // 1. Check for explicit Reddit Thing Fullnames (single or multiple comma/space-separated)
+    const tokens = trimmed.split(/[\s,]+/).filter(Boolean);
+    if (tokens.length > 0) {
+        const hasPost = tokens.some(t => /^t3_[a-z0-9]+$/i.test(t));
+        const hasComment = tokens.some(t => /^t1_[a-z0-9]+$/i.test(t));
+        const allThings = tokens.every(t => /^(?:t1_|t3_)[a-z0-9]+$/i.test(t));
+
+        if (allThings && hasPost && hasComment) {
+            return { type: "mixed", format: "id" };
+        }
+        if (tokens.every(t => /^t3_[a-z0-9]+$/i.test(t))) {
+            const clean = tokens.join(",");
+            return { type: "submission", id: clean, cleanInput: clean, format: "id" };
+        }
+        if (tokens.every(t => /^t1_[a-z0-9]+$/i.test(t))) {
+            const clean = tokens.join(",");
+            return { type: "comment", id: clean, cleanInput: clean, format: "id" };
+        }
+    }
+
+    // 2. Check for Reddit URLs
+    const redditUrlRegex = /^(?:https?:\/\/)?(?:([a-z0-9-]+)\.)?(reddit\.com|redd\.it)(\/[^\s]*)?$/i;
+    const urlMatch = trimmed.match(redditUrlRegex);
+    if (urlMatch) {
+        const subdomain = (urlMatch[1] || "").toLowerCase();
+        const domain = urlMatch[2].toLowerCase();
+        let pathname = urlMatch[3] || "/";
+        pathname = pathname.split(/[?#]/)[0];
+        const segments = pathname.split('/').filter(Boolean);
+
+        if (domain === "redd.it") {
+            if (subdomain !== "" && subdomain !== "www") {
+                return null;
+            }
+            if (segments.length > 0 && /^[a-z0-9]+$/i.test(segments[0])) {
+                const postId = segments[0];
+                return { type: "submission", id: "t3_" + postId, cleanInput: "t3_" + postId, format: "link" };
+            }
+        } else if (domain === "reddit.com") {
+            // Case 1: Post or Comment path with /comments/
+            const commentsIdx = segments.indexOf("comments");
+            if (commentsIdx !== -1 && segments.length > commentsIdx + 1 && /^[a-z0-9]+$/i.test(segments[commentsIdx + 1])) {
+                const postId = segments[commentsIdx + 1];
+                const afterPost = segments.slice(commentsIdx + 2);
+
+                if (afterPost.length >= 2 && /^[a-z0-9]+$/i.test(afterPost[afterPost.length - 1])) {
+                    const commentId = afterPost[afterPost.length - 1];
+                    return { type: "comment", id: "t1_" + commentId, cleanInput: "t1_" + commentId, format: "link" };
+                } else {
+                    return { type: "submission", id: "t3_" + postId, cleanInput: "t3_" + postId, format: "link" };
+                }
+            }
+
+            // Case 2: Gallery or Poll post paths: .../gallery/{postId} or .../poll/{postId}
+            const galleryIdx = segments.indexOf("gallery");
+            if (galleryIdx !== -1 && segments.length > galleryIdx + 1 && /^[a-z0-9]+$/i.test(segments[galleryIdx + 1])) {
+                return { type: "submission", id: "t3_" + segments[galleryIdx + 1], cleanInput: "t3_" + segments[galleryIdx + 1], format: "link" };
+            }
+
+            // Case 3: Reddit app share links: .../s/{shareId}
+            const sIdx = segments.indexOf("s");
+            if (sIdx !== -1 && segments.length > sIdx + 1 && /^[a-z0-9]+$/i.test(segments[sIdx + 1])) {
+                return { type: "share", id: segments[sIdx + 1], cleanInput: trimmed, format: "share_link" };
+            }
+        }
+    }
+
+    return null;
+}
+
+function updateTypeMismatchNotice() {
+    const qEl = document.getElementById("q");
+    const kindEl = document.getElementById("kind");
+    const helpEl = document.getElementById("qMismatchHelp");
+    const textEl = document.getElementById("qMismatchText");
+    const linkEl = document.getElementById("qMismatchLink");
+    if (!qEl || !kindEl || !helpEl || !textEl || !linkEl) return;
+
+    const val = qEl.value.trim();
+    const currentKind = kindEl.value;
+    const parsed = parseRedditInput(val);
+
+    if (parsed) {
+        if (parsed.type === "share") {
+            textEl.textContent = "Share link detected. Please use a direct Reddit link.";
+            linkEl.textContent = "";
+            linkEl.onclick = null;
+            helpEl.classList.remove("is-hidden");
+            return;
+        }
+
+        if (parsed.type === "mixed") {
+            textEl.textContent = "Mixed post and comment IDs detected. Please search each type separately.";
+            linkEl.textContent = "";
+            linkEl.onclick = null;
+            helpEl.classList.remove("is-hidden");
+            return;
+        }
+
+        if (parsed.type !== currentKind) {
+            const noun = parsed.format === "link" ? "link" : "thing ID";
+            if (parsed.type === "submission") {
+                textEl.textContent = `Reddit post ${noun} detected.`;
+                linkEl.textContent = "Switch to Searching For Posts";
+                linkEl.onclick = (e) => {
+                    e.preventDefault();
+                    kindEl.value = "submission";
+                    updateKindUI();
+                    updateTypeMismatchNotice();
+                };
+            } else {
+                textEl.textContent = `Reddit comment ${noun} detected.`;
+                linkEl.textContent = "Switch to Searching For Comments";
+                linkEl.onclick = (e) => {
+                    e.preventDefault();
+                    kindEl.value = "comment";
+                    updateKindUI();
+                    updateTypeMismatchNotice();
+                };
+            }
+            helpEl.classList.remove("is-hidden");
+            return;
+        }
+    }
+
+    helpEl.classList.add("is-hidden");
+}
+
 function loadParams() {
     form.reset();
     getAccessToken();
     getSettings();
+    let hasKindParam = false;
     const urlParams = new URLSearchParams(window.location.search).entries();
     for (const param of urlParams) {
         try {
             let value;
+            if (param[0] === "kind") {
+                hasKindParam = true;
+            }
             if (param[0] == "until" || param[0] == "since") {
                 const num = Number(param[1]);
                 if (!isNaN(num)) {
@@ -190,10 +327,18 @@ function loadParams() {
             console.log(e);
         }
     }
+    const qEl = form.elements['q'];
+    if (qEl && qEl.value.trim()) {
+        const parsed = parseRedditInput(qEl.value.trim());
+        if (parsed && !hasKindParam && (parsed.type === "submission" || parsed.type === "comment")) {
+            form.elements['kind'].value = parsed.type;
+        }
+    }
     validateDateRange();
     validateScoreRange();
     updateClearDateButtons();
     updateKindUI();
+    updateTypeMismatchNotice();
 }
 
 function getAccessToken() {
@@ -298,7 +443,29 @@ if (limitEl) {
 
 const kindEl = document.getElementById('kind');
 if (kindEl) {
-    kindEl.addEventListener('change', updateKindUI);
+    kindEl.addEventListener('change', () => {
+        updateKindUI();
+        updateTypeMismatchNotice();
+    });
+}
+
+const queryInput = document.getElementById('q');
+if (queryInput) {
+    const handleQueryInput = () => {
+        const val = queryInput.value.trim();
+        const parsed = parseRedditInput(val);
+        if (parsed && (parsed.type === "submission" || parsed.type === "comment")) {
+            if (form.elements['kind'].value !== parsed.type) {
+                form.elements['kind'].value = parsed.type;
+                updateKindUI();
+            }
+        }
+        updateTypeMismatchNotice();
+    };
+    queryInput.addEventListener('input', handleQueryInput);
+    queryInput.addEventListener('paste', () => {
+        setTimeout(handleQueryInput, 0);
+    });
 }
 
 const tokenEl = document.getElementById('accessToken');
@@ -531,6 +698,9 @@ async function search(form, until=-1, isRetry=false) {
         currentLimit = activeSearchConfig.limit;
     } else {
         let min_score, max_score, since, formUntil;
+        const rawQuery = form.elements['q'].value.trim();
+        const parsedObject = parseRedditInput(rawQuery);
+
         if (form.elements['kind'].value == "submission") {
             psURL = "https://api.pushshift.io/reddit/submission/search?html_decode=True";
             path += "kind=submission";
@@ -630,16 +800,16 @@ async function search(form, until=-1, isRetry=false) {
         }
 
         const queryVal = form.elements['q'].value.trim();
+        const isObjectSearch = Boolean(parsedObject && parsedObject.type === form.elements['kind'].value);
         if (queryVal !== '') {
-            const encodedQuery = encodeURIComponent(queryVal);
-            if (form.elements['kind'].value == "submission" && queryVal.startsWith("t3_")) {
-                psURL += "&ids=" + encodedQuery;
-            } else if (form.elements['kind'].value == "comment" && queryVal.startsWith("t1_")) {
-                psURL += "&ids=" + encodedQuery;
+            if (isObjectSearch) {
+                psURL += "&ids=" + encodeURIComponent(parsedObject.id);
+                path += "&ids=" + encodeURIComponent(parsedObject.cleanInput);
             } else {
+                const encodedQuery = encodeURIComponent(queryVal);
                 psURL += "&q=" + encodedQuery;
+                path += "&q=" + encodedQuery;
             }
-            path += "&q=" + encodedQuery;
         }
 
         const rawLimit = form.elements['limit'].value.trim();
@@ -673,7 +843,7 @@ async function search(form, until=-1, isRetry=false) {
             activeSearchConfig = {
                 psBaseURL: psURL,
                 limit: currentLimit,
-                searchTerm: queryVal,
+                searchTerm: isObjectSearch ? "" : queryVal,
                 highlight: form.elements['highlight'].checked
             };
             if (formUntil !== undefined) {
