@@ -22,6 +22,16 @@ form.addEventListener('submit', (event) => {
         }
     });
     updateClearDateButtons();
+    if (!validateAccessToken()) {
+        const tokenEl = document.getElementById("accessToken");
+        if (tokenEl) tokenEl.reportValidity();
+        return;
+    }
+    if (!validateLimit()) {
+        const limitEl = document.getElementById("limit");
+        if (limitEl) limitEl.reportValidity();
+        return;
+    }
     if (!form.checkValidity()) {
         form.reportValidity();
         return;
@@ -32,22 +42,85 @@ form.addEventListener('submit', (event) => {
         return;
     }
     if (!validateScoreRange()) {
-        const maxScoreEl = document.getElementById("max_score");
-        if (maxScoreEl) maxScoreEl.reportValidity();
+        const minEl = document.getElementById("min_score");
+        const maxEl = document.getElementById("max_score");
+        if (minEl && !minEl.checkValidity()) {
+            minEl.reportValidity();
+        } else if (maxEl) {
+            maxEl.reportValidity();
+        }
         return;
     }
     search(form);
 });
+
+function validateAccessToken() {
+    const tokenEl = document.getElementById("accessToken");
+    if (!tokenEl) return true;
+    if (!tokenEl.value.trim()) {
+        tokenEl.setCustomValidity("Please enter a valid Pushshift access token");
+        return false;
+    }
+    tokenEl.setCustomValidity("");
+    return true;
+}
+
+function validateLimit() {
+    const limitEl = document.getElementById("limit");
+    if (!limitEl) return true;
+    const raw = limitEl.value.trim();
+    if (raw === "") {
+        limitEl.setCustomValidity("");
+        return true;
+    }
+    const num = parseInt(raw, 10);
+    if (isNaN(num) || String(num) !== raw || (limitEl.validity && (limitEl.validity.badInput || limitEl.validity.stepMismatch))) {
+        limitEl.setCustomValidity("Please enter an integer between 1 and 1000");
+        return false;
+    }
+    if (num < 1 || (limitEl.validity && limitEl.validity.rangeUnderflow)) {
+        limitEl.setCustomValidity("Please select a value greater than 0");
+        return false;
+    }
+    if (num > 1000 || (limitEl.validity && limitEl.validity.rangeOverflow)) {
+        limitEl.setCustomValidity("Please select a value less than or equal to 1000");
+        return false;
+    }
+    limitEl.setCustomValidity("");
+    return true;
+}
+
+function validateScoreInput(el) {
+    if (!el) return true;
+    const raw = el.value.trim();
+    if (raw === "") {
+        el.setCustomValidity("");
+        return true;
+    }
+    if (!/^-?\d+$/.test(raw) || (el.validity && (el.validity.badInput || el.validity.stepMismatch))) {
+        el.setCustomValidity("Please enter an integer");
+        return false;
+    }
+    el.setCustomValidity("");
+    return true;
+}
 
 function validateScoreRange() {
     const minEl = document.getElementById("min_score");
     const maxEl = document.getElementById("max_score");
     if (!minEl || !maxEl) return true;
 
+    const minValid = validateScoreInput(minEl);
+    const maxValid = validateScoreInput(maxEl);
+
+    if (!minValid || !maxValid) {
+        return false;
+    }
+
     if (minEl.value.trim() !== '' && maxEl.value.trim() !== '') {
         const minVal = parseInt(minEl.value.trim(), 10);
         const maxVal = parseInt(maxEl.value.trim(), 10);
-        if (!isNaN(minVal) && !isNaN(maxVal) && maxVal < minVal) {
+        if (maxVal < minVal) {
             maxEl.setCustomValidity("Please enter a value greater than or equal to 'Min Score'");
             return false;
         }
@@ -465,12 +538,19 @@ settingKeys.forEach(id => {
     if (el) {
         el.addEventListener('input', validateScoreRange);
         el.addEventListener('change', validateScoreRange);
+        el.addEventListener('invalid', validateScoreRange);
     }
 });
 
 const limitEl = document.getElementById('limit');
 if (limitEl) {
-    limitEl.addEventListener('input', () => limitEl.setCustomValidity(''));
+    limitEl.addEventListener('input', () => {
+        limitEl.setCustomValidity('');
+        validateLimit();
+    });
+    limitEl.addEventListener('invalid', () => {
+        validateLimit();
+    });
 }
 
 const kindEl = document.getElementById('kind');
@@ -507,6 +587,12 @@ if (tokenEl) {
     });
     tokenEl.addEventListener('blur', () => {
         tokenEl.type = 'password';
+    });
+    tokenEl.addEventListener('input', () => {
+        tokenEl.setCustomValidity('');
+    });
+    tokenEl.addEventListener('invalid', () => {
+        tokenEl.setCustomValidity("Please enter a valid Pushshift access token");
     });
 }
 
@@ -764,8 +850,7 @@ async function search(form, until=-1, isRetry=false) {
 
         const rawMinScore = form.elements['min_score'].value.trim();
         if (rawMinScore !== '') {
-            const parsedMin = parseInt(rawMinScore, 10);
-            if (isNaN(parsedMin)) {
+            if (!/^-?\d+$/.test(rawMinScore)) {
                 const minScoreEl = document.getElementById("min_score");
                 if (minScoreEl) {
                     minScoreEl.setCustomValidity("Please enter an integer");
@@ -773,15 +858,14 @@ async function search(form, until=-1, isRetry=false) {
                 }
                 return;
             }
-            min_score = parsedMin;
+            min_score = parseInt(rawMinScore, 10);
             psURL += "&min_score=" + min_score;
             path += "&min_score=" + min_score;
         }
 
         const rawMaxScore = form.elements['max_score'].value.trim();
         if (rawMaxScore !== '') {
-            const parsedMax = parseInt(rawMaxScore, 10);
-            if (isNaN(parsedMax)) {
+            if (!/^-?\d+$/.test(rawMaxScore)) {
                 const maxScoreEl = document.getElementById("max_score");
                 if (maxScoreEl) {
                     maxScoreEl.setCustomValidity("Please enter an integer");
@@ -789,7 +873,7 @@ async function search(form, until=-1, isRetry=false) {
                 }
                 return;
             }
-            max_score = parsedMax;
+            max_score = parseInt(rawMaxScore, 10);
             psURL += "&max_score=" + max_score;
             path += "&max_score=" + max_score;
         }
@@ -858,9 +942,15 @@ async function search(form, until=-1, isRetry=false) {
                     limitEl.reportValidity();
                 }
                 return;
-            } else if (limit < 1 || limit > 1000) {
+            } else if (limit < 1) {
                 if (limitEl) {
-                    limitEl.setCustomValidity("Value must be between 1 and 1000");
+                    limitEl.setCustomValidity("Please select a value greater than 0");
+                    limitEl.reportValidity();
+                }
+                return;
+            } else if (limit > 1000) {
+                if (limitEl) {
+                    limitEl.setCustomValidity("Please select a value less than or equal to 1000");
                     limitEl.reportValidity();
                 }
                 return;
