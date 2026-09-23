@@ -153,6 +153,38 @@ function initSearchTips() {
     });
 }
 
+function cleanRedditEntityList(input, prefix) {
+    if (!input || typeof input !== "string") return "";
+    const prefixRegex = new RegExp(`^(\\s*\\/)?${prefix}\\/`, 'i');
+    return input
+        .split(',')
+        .map(t => {
+            let item = t.trim();
+            if (!item) return "";
+            let isNegated = false;
+            if (item.startsWith("!")) {
+                isNegated = true;
+                item = item.slice(1).trim();
+            }
+            item = item.replace(prefixRegex, '').replace(/\/+$/, '');
+            if (item.startsWith("!")) {
+                isNegated = true;
+                item = item.slice(1).trim();
+            }
+            return item ? (isNegated ? "!" + item : item) : "";
+        })
+        .filter(Boolean)
+        .join(",");
+}
+
+function cleanAuthorInput(input) {
+    return cleanRedditEntityList(input, 'u');
+}
+
+function cleanSubredditInput(input) {
+    return cleanRedditEntityList(input, 'r');
+}
+
 function parseRedditInput(input) {
     if (!input || typeof input !== "string") return null;
     let trimmed = input.trim();
@@ -308,9 +340,9 @@ function loadParams() {
                     }
                 }
             } else if (param[0] == "author") {
-                value = param[1].replace(/^(\/)?u\//i, '');
+                value = cleanAuthorInput(param[1]);
             } else if (param[0] == "subreddit") {
-                value = param[1].replace(/^(\/)?r\//i, '');
+                value = cleanSubredditInput(param[1]);
             } else {
                 value = param[1];
             }
@@ -710,10 +742,10 @@ async function search(form, until=-1, isRetry=false) {
         }
 
         const authorEl = form.elements['author'];
-        const rawAuthor = authorEl.value.trim().replace(/^(\/)?u\//i, '');
-        if (rawAuthor !== '') {
-            authorEl.value = rawAuthor;
-            const encodedAuthor = encodeURIComponent(rawAuthor);
+        const cleanAuthor = cleanAuthorInput(authorEl.value);
+        if (cleanAuthor !== '') {
+            authorEl.value = cleanAuthor;
+            const encodedAuthor = encodeURIComponent(cleanAuthor);
             psURL += "&author=" + encodedAuthor;
             if (form.elements['exactAuthorMatch'].checked) {
                 psURL += "&exact_author=true";
@@ -722,10 +754,10 @@ async function search(form, until=-1, isRetry=false) {
         }
 
         const subredditEl = form.elements['subreddit'];
-        const rawSubreddit = subredditEl.value.trim().replace(/^(\/)?r\//i, '');
-        if (rawSubreddit !== '') {
-            subredditEl.value = rawSubreddit;
-            const encodedSubreddit = encodeURIComponent(rawSubreddit);
+        const cleanSubreddit = cleanSubredditInput(subredditEl.value);
+        if (cleanSubreddit !== '') {
+            subredditEl.value = cleanSubreddit;
+            const encodedSubreddit = encodeURIComponent(cleanSubreddit);
             psURL += "&subreddit=" + encodedSubreddit;
             path += "&subreddit=" + encodedSubreddit;
         }
