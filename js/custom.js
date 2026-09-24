@@ -47,6 +47,11 @@ form.addEventListener('submit', (event) => {
     search(form);
 });
 
+const resetBtn = document.getElementById('resetButton');
+if (resetBtn) {
+    resetBtn.addEventListener('click', resetForm);
+}
+
 function validateAccessToken() {
     const tokenEl = document.getElementById("accessToken");
     if (!tokenEl) return true;
@@ -177,6 +182,68 @@ function updateClearDateButtons() {
             }
         }
     });
+}
+
+function resetForm() {
+    const form = document.getElementById('searchForm');
+    if (!form) return;
+
+    const resetFields = ['author', 'subreddit', 'limit', 'min_score', 'max_score', 'since', 'until', 'q'];
+    resetFields.forEach(name => {
+        const el = form.elements[name];
+        if (el) {
+            el.value = '';
+            if (typeof el.setCustomValidity === 'function') {
+                el.setCustomValidity('');
+            }
+        }
+    });
+
+    const kindEl = form.elements['kind'];
+    if (kindEl && typeof kindEl.setCustomValidity === 'function') {
+        kindEl.setCustomValidity('');
+    }
+
+    const tokenEl = form.elements['accessToken'];
+    if (tokenEl && typeof tokenEl.setCustomValidity === 'function') {
+        tokenEl.setCustomValidity('');
+    }
+
+    ['since', 'until'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.dataset.autoPopulated) {
+            delete el.dataset.autoPopulated;
+        }
+    });
+
+    updateKindUI();
+    updateClearDateButtons();
+    updateTypeMismatchNotice();
+
+    currentSearchSessionId++;
+    activeSearchConfig = null;
+    accumulatedResults = [];
+    revokeCurrentJsonBlob();
+    latestCurlCommand = "";
+
+    const searchBtn = document.getElementById("searchButton");
+    if (searchBtn) {
+        searchBtn.disabled = false;
+        searchBtn.classList.remove("is-loading");
+    }
+
+    const resultsContainer = document.getElementById("results");
+    if (resultsContainer) {
+        resultsContainer.innerHTML = "";
+    }
+    const apiInfoContainer = document.getElementById("apiInfo");
+    if (apiInfoContainer) {
+        apiInfoContainer.innerHTML = "";
+    }
+
+    if (typeof window !== "undefined" && window.location && window.location.search) {
+        history.pushState(Date.now(), "Reddit Search", window.location.pathname);
+    }
 }
 
 function initSearchTips() {
