@@ -1167,7 +1167,7 @@ async function search(form, until=-1, isRetry=false) {
         const showThumbnails = form.elements['showThumbnails'].checked;
 
         let dividerHtml = "";
-        if (until < 0 && uniqueData.length > 0) {
+        if (until < 0) {
             dividerHtml = `
                 <div class="batch-divider is-borderless my-3" id="initialBatchDivider">
                     <span class="batch-divider-label">
@@ -1218,32 +1218,19 @@ async function search(form, until=-1, isRetry=false) {
             applySearchHighlighting(newCards, searchTerm);
         }
 
-        if (result_count > 0) {
-            if (until < 0) {
-                document.getElementById("apiInfo").innerHTML = `
-                    <div class="has-text-weight-bold has-text-white">
-                        ${until == -2 ? "<span class='has-text-weight-normal mr-1'>Token Refreshed -</span>" : ""}
-                        <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"}
-                    </div>
-                `;
-            } else {
-                document.getElementById("apiInfo").innerHTML = `
-                    <div class="api-status-row has-text-weight-bold has-text-white">
-                        <span class="api-status-left"><span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"}</span>
-                        <span class="api-status-dot">·</span>
-                        <span class="api-status-right"><a href="${currentJsonBlobURL}" target="_blank" rel="noopener noreferrer" title="View raw JSON response" class="has-text-white">View JSON</a></span>
-                    </div>
-                `;
-            }
-        } else {
+        if (until < 0) {
             document.getElementById("apiInfo").innerHTML = `
                 <div class="has-text-weight-bold has-text-white">
                     ${until == -2 ? "<span class='has-text-weight-normal mr-1'>Token Refreshed -</span>" : ""}
-                    <span id="result_count">0</span> Results
-                    <span class="mx-2">·</span>
-                    <a href="${currentJsonBlobURL}" target="_blank" rel="noopener noreferrer" title="View raw JSON response" class="has-text-white">View JSON</a>
-                    <span class="mx-2">·</span>
-                    <a href="#" onclick="event.preventDefault(); copyCurl(this);" data-curl="${escapeHTML(currentRequestCurl)}" title="Copy cURL command to clipboard" class="has-text-white">Copy cURL</a>
+                    <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"}
+                </div>
+            `;
+        } else {
+            document.getElementById("apiInfo").innerHTML = `
+                <div class="api-status-row has-text-weight-bold has-text-white">
+                    <span class="api-status-left"><span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"}</span>
+                    <span class="api-status-dot">·</span>
+                    <span class="api-status-right"><a href="${currentJsonBlobURL}" target="_blank" rel="noopener noreferrer" title="View raw JSON response" class="has-text-white">View JSON</a></span>
                 </div>
             `;
         }
