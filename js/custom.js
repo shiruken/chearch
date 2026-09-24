@@ -221,6 +221,7 @@ function resetForm() {
     updateTypeMismatchNotice();
 
     currentSearchSessionId++;
+    currentRequestNumber = 1;
     activeSearchConfig = null;
     accumulatedResults = [];
     revokeCurrentJsonBlob();
@@ -243,6 +244,11 @@ function resetForm() {
 
     if (typeof window !== "undefined" && window.location && window.location.search) {
         history.pushState(Date.now(), "Reddit Search", window.location.pathname);
+    }
+
+    const resetBtn = document.getElementById("resetButton");
+    if (resetBtn) {
+        resetBtn.blur();
     }
 }
 
@@ -810,18 +816,19 @@ function updateMarkdownRendering() {
 
 let latestCurlCommand = "";
 let accumulatedResults = [];
-let copyTimeout;
 let activeSearchConfig = null;
 let currentSearchSessionId = 0;
+let currentRequestNumber = 1;
 
-async function copyCurl(btnElement) {
-    if (!latestCurlCommand) return;
+async function copyCurl(btnElement, commandToCopy = null) {
+    const textToCopy = commandToCopy || (btnElement && btnElement.dataset && btnElement.dataset.curl) || latestCurlCommand;
+    if (!textToCopy) return;
     try {
         if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(latestCurlCommand);
+            await navigator.clipboard.writeText(textToCopy);
         } else {
             const ta = document.createElement("textarea");
-            ta.value = latestCurlCommand;
+            ta.value = textToCopy;
             ta.style.position = "fixed";
             ta.style.opacity = "0";
             document.body.appendChild(ta);
@@ -831,8 +838,10 @@ async function copyCurl(btnElement) {
         }
         if (btnElement) {
             btnElement.innerText = "Copied!";
-            clearTimeout(copyTimeout);
-            copyTimeout = setTimeout(() => {
+            if (btnElement._copyTimeout) {
+                clearTimeout(btnElement._copyTimeout);
+            }
+            btnElement._copyTimeout = setTimeout(() => {
                 btnElement.innerText = "Copy cURL";
             }, 1500);
         }
@@ -855,6 +864,7 @@ async function search(form, until=-1, isRetry=false) {
     const searchSessionId = currentSearchSessionId;
     
     if (until < 0) {    // New Search
+        currentRequestNumber = 1;
         const searchBtn = document.getElementById("searchButton");
         if (searchBtn) {
             searchBtn.disabled = true;
@@ -1013,9 +1023,10 @@ async function search(form, until=-1, isRetry=false) {
 
     const safeUrl = psURL.replaceAll("'", "%27");
     const safeToken = accessToken ? accessToken.replaceAll("'", "'\\''") : "";
-    latestCurlCommand = accessToken 
+    const currentRequestCurl = accessToken 
         ? `curl '${safeUrl}' \\\n  -H 'Authorization: Bearer ${safeToken}'`
         : `curl '${safeUrl}'`;
+    latestCurlCommand = currentRequestCurl;
 
     const searchStartTime = Date.now();
 
@@ -1141,13 +1152,60 @@ async function search(form, until=-1, isRetry=false) {
         const hasMore = (json.data.length >= currentLimit) && (uniqueData.length > 0);
         const isEnd = !hasMore && ((accumulatedResults.length + uniqueData.length) > 0);
 
+        accumulatedResults = accumulatedResults.concat(uniqueData);
+        const result_count = accumulatedResults.length;
+
+        revokeCurrentJsonBlob();
+        const accumulatedJson = { ...json, data: accumulatedResults };
+        const blob = new Blob([JSON.stringify(accumulatedJson, null, 2)], { type: "application/json" });
+        currentJsonBlobURL = URL.createObjectURL(blob);
+
         const resultsContainer = document.getElementById("results");
         const prevCardCount = resultsContainer.querySelectorAll(".card").length;
 
         const renderMarkdown = form.elements['renderMarkdown'].checked;
         const showThumbnails = form.elements['showThumbnails'].checked;
 
-        const html = generateHTML(uniqueData, renderMarkdown, showThumbnails, hasMore, rawNextUntil, isEnd);
+        let dividerHtml = "";
+        if (until < 0 && uniqueData.length > 0) {
+            dividerHtml = `
+                <div class="batch-divider is-borderless my-3" id="initialBatchDivider">
+                    <span class="batch-divider-label">
+                        <span class="batch-divider-left">
+                            <span class="batch-divider-prefix is-hidden">Request 1</span>
+                            <a href="${currentJsonBlobURL}" target="_blank" rel="noopener noreferrer" title="View raw JSON response" class="has-text-grey-light batch-divider-json is-size-7" id="initialViewJson">View JSON</a>
+                        </span>
+                        <span class="batch-divider-dot">·</span>
+                        <span class="batch-divider-right">
+                            <a href="#" class="batch-divider-curl has-text-grey-light is-size-7" onclick="event.preventDefault(); copyCurl(this);" data-curl="${escapeHTML(currentRequestCurl)}" title="Copy cURL command for this request">Copy cURL</a>
+                        </span>
+                    </span>
+                </div>
+            `;
+        } else if (until >= 0 && uniqueData.length > 0) {
+            const initialDivider = document.getElementById("initialBatchDivider");
+            if (initialDivider) {
+                initialDivider.classList.remove("is-borderless");
+                const prefix = initialDivider.querySelector(".batch-divider-prefix");
+                if (prefix) prefix.classList.remove("is-hidden");
+                const viewJson = document.getElementById("initialViewJson");
+                if (viewJson) viewJson.remove();
+            }
+            currentRequestNumber++;
+            dividerHtml = `
+                <div class="batch-divider my-4">
+                    <span class="batch-divider-label">
+                        <span class="batch-divider-left">Request ${currentRequestNumber}</span>
+                        <span class="batch-divider-dot">·</span>
+                        <span class="batch-divider-right">
+                            <a href="#" class="batch-divider-curl has-text-grey-light is-size-7" onclick="event.preventDefault(); copyCurl(this);" data-curl="${escapeHTML(currentRequestCurl)}" title="Copy cURL command for this request">Copy cURL</a>
+                        </span>
+                    </span>
+                </div>
+            `;
+        }
+
+        const html = dividerHtml + generateHTML(uniqueData, renderMarkdown, showThumbnails, hasMore, rawNextUntil, isEnd);
         resultsContainer.insertAdjacentHTML("beforeend", html);
         updateThumbnailsVisibility();
 
@@ -1160,27 +1218,35 @@ async function search(form, until=-1, isRetry=false) {
             applySearchHighlighting(newCards, searchTerm);
         }
 
-        accumulatedResults = accumulatedResults.concat(uniqueData);
-        const result_count = accumulatedResults.length;
-
-        revokeCurrentJsonBlob();
-        const accumulatedJson = { ...json, data: accumulatedResults };
-        const blob = new Blob([JSON.stringify(accumulatedJson, null, 2)], { type: "application/json" });
-        currentJsonBlobURL = URL.createObjectURL(blob);
-
-        document.getElementById("apiInfo").innerHTML = `
-            <div>
-                <span class="has-text-weight-bold has-text-white">
+        if (result_count > 0) {
+            if (until < 0) {
+                document.getElementById("apiInfo").innerHTML = `
+                    <div class="has-text-weight-bold has-text-white">
+                        ${until == -2 ? "<span class='has-text-weight-normal mr-1'>Token Refreshed -</span>" : ""}
+                        <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"}
+                    </div>
+                `;
+            } else {
+                document.getElementById("apiInfo").innerHTML = `
+                    <div class="api-status-row has-text-weight-bold has-text-white">
+                        <span class="api-status-left"><span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"}</span>
+                        <span class="api-status-dot">·</span>
+                        <span class="api-status-right"><a href="${currentJsonBlobURL}" target="_blank" rel="noopener noreferrer" title="View raw JSON response" class="has-text-white">View JSON</a></span>
+                    </div>
+                `;
+            }
+        } else {
+            document.getElementById("apiInfo").innerHTML = `
+                <div class="has-text-weight-bold has-text-white">
                     ${until == -2 ? "<span class='has-text-weight-normal mr-1'>Token Refreshed -</span>" : ""}
-                    <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"}
-                </span>
-            </div>
-            <div class="is-size-7 mt-1">
-                <a href="${currentJsonBlobURL}" target="_blank" rel="noopener noreferrer" title="View raw JSON response" class="has-text-grey-light">View JSON</a>
-                <span class="has-text-grey mx-1">·</span>
-                <a href="#" onclick="event.preventDefault(); copyCurl(this);" title="Copy cURL command to clipboard" class="has-text-grey-light">Copy cURL</a>
-            </div>
-        `;
+                    <span id="result_count">0</span> Results
+                    <span class="mx-2">·</span>
+                    <a href="${currentJsonBlobURL}" target="_blank" rel="noopener noreferrer" title="View raw JSON response" class="has-text-white">View JSON</a>
+                    <span class="mx-2">·</span>
+                    <a href="#" onclick="event.preventDefault(); copyCurl(this);" data-curl="${escapeHTML(currentRequestCurl)}" title="Copy cURL command to clipboard" class="has-text-white">Copy cURL</a>
+                </div>
+            `;
+        }
 
         // Inject buttons for expanding linked media
         injectMediaExpanderButtons(newCards);
