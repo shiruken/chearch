@@ -41,14 +41,7 @@ form.addEventListener('submit', (event) => {
         if (untilEl) untilEl.reportValidity();
         return;
     }
-    if (!validateScoreRange()) {
-        const minEl = document.getElementById("min_score");
-        const maxEl = document.getElementById("max_score");
-        if (minEl && !minEl.checkValidity()) {
-            minEl.reportValidity();
-        } else if (maxEl) {
-            maxEl.reportValidity();
-        }
+    if (!reportScoreValidity()) {
         return;
     }
     search(form);
@@ -126,6 +119,20 @@ function validateScoreRange() {
         }
     }
     maxEl.setCustomValidity("");
+    return true;
+}
+
+function reportScoreValidity() {
+    if (!validateScoreRange()) {
+        const minEl = document.getElementById("min_score");
+        const maxEl = document.getElementById("max_score");
+        if (minEl && !minEl.checkValidity()) {
+            minEl.reportValidity();
+        } else if (maxEl) {
+            maxEl.reportValidity();
+        }
+        return false;
+    }
     return true;
 }
 
@@ -231,21 +238,7 @@ function cleanRedditEntityList(input, prefix) {
     const prefixRegex = new RegExp(`^(\\s*\\/)?${prefix}\\/`, 'i');
     return input
         .split(',')
-        .map(t => {
-            let item = t.trim();
-            if (!item) return "";
-            let isNegated = false;
-            if (item.startsWith("!")) {
-                isNegated = true;
-                item = item.slice(1).trim();
-            }
-            item = item.replace(prefixRegex, '').replace(/\/+$/, '');
-            if (item.startsWith("!")) {
-                isNegated = true;
-                item = item.slice(1).trim();
-            }
-            return item ? (isNegated ? "!" + item : item) : "";
-        })
+        .map(t => t.trim().replace(prefixRegex, '').replace(/\/+$/, '').trim())
         .filter(Boolean)
         .join(",");
 }
@@ -455,6 +448,15 @@ function getAccessToken() {
     } catch {}
 }
 
+let currentJsonBlobURL = null;
+
+function revokeCurrentJsonBlob() {
+    if (currentJsonBlobURL) {
+        URL.revokeObjectURL(currentJsonBlobURL);
+        currentJsonBlobURL = null;
+    }
+}
+
 function clearAccessToken(userInitiated = false) {
     try {
         localStorage.removeItem("accessToken");
@@ -462,6 +464,7 @@ function clearAccessToken(userInitiated = false) {
     form.elements['accessToken'].value = "";
     if (userInitiated) {
         document.getElementById("apiInfo").innerHTML = "";
+        revokeCurrentJsonBlob();
         const el = document.getElementById("accessToken");
         if (el) el.focus();
     }
@@ -699,6 +702,7 @@ function injectMediaExpanderButtons(cards) {
                 const url = link.href;
                 if (extensions.some(extension => url.includes(extension))) {
                     const button = document.createElement("button");
+                    button.type = "button";
                     button.classList.add("delete", "closed");
                     button.setAttribute("onclick", "directExpand(this)");
                     link.after(button);
@@ -738,7 +742,6 @@ function updateMarkdownRendering() {
 }
 
 let latestCurlCommand = "";
-let currentJsonBlobURL = null;
 let accumulatedResults = [];
 let copyTimeout;
 let activeSearchConfig = null;
@@ -794,10 +797,7 @@ async function search(form, until=-1, isRetry=false) {
         accumulatedResults = [];
         if (until == -1) {
             document.getElementById("apiInfo").innerHTML = "";
-            if (currentJsonBlobURL) {
-                URL.revokeObjectURL(currentJsonBlobURL);
-                currentJsonBlobURL = null;
-            }
+            revokeCurrentJsonBlob();
         }
     } else {            // Fetch More
         const fetchBtn = document.getElementById("fetch-" + until);
@@ -815,6 +815,20 @@ async function search(form, until=-1, isRetry=false) {
         psURL = activeSearchConfig.psBaseURL + "&until=" + until;
         currentLimit = activeSearchConfig.limit;
     } else {
+        if (!validateLimit()) {
+            const limitEl = document.getElementById("limit");
+            if (limitEl) limitEl.reportValidity();
+            return;
+        }
+        if (!validateDateRange()) {
+            const untilEl = document.getElementById("until");
+            if (untilEl) untilEl.reportValidity();
+            return;
+        }
+        if (!reportScoreValidity()) {
+            return;
+        }
+
         let min_score, max_score, since, formUntil;
         const rawQuery = form.elements['q'].value.trim();
         const parsedObject = parseRedditInput(rawQuery);
@@ -833,10 +847,13 @@ async function search(form, until=-1, isRetry=false) {
             authorEl.value = cleanAuthor;
             const encodedAuthor = encodeURIComponent(cleanAuthor);
             psURL += "&author=" + encodedAuthor;
+            path += "&author=" + encodedAuthor;
             if (form.elements['exactAuthorMatch'].checked) {
                 psURL += "&exact_author=true";
+                path += "&exactAuthorMatch=true";
+            } else {
+                path += "&exactAuthorMatch=false";
             }
-            path += "&author=" + encodedAuthor;
         }
 
         const subredditEl = form.elements['subreddit'];
@@ -850,14 +867,6 @@ async function search(form, until=-1, isRetry=false) {
 
         const rawMinScore = form.elements['min_score'].value.trim();
         if (rawMinScore !== '') {
-            if (!/^-?\d+$/.test(rawMinScore)) {
-                const minScoreEl = document.getElementById("min_score");
-                if (minScoreEl) {
-                    minScoreEl.setCustomValidity("Please enter an integer");
-                    minScoreEl.reportValidity();
-                }
-                return;
-            }
             min_score = parseInt(rawMinScore, 10);
             psURL += "&min_score=" + min_score;
             path += "&min_score=" + min_score;
@@ -865,28 +874,9 @@ async function search(form, until=-1, isRetry=false) {
 
         const rawMaxScore = form.elements['max_score'].value.trim();
         if (rawMaxScore !== '') {
-            if (!/^-?\d+$/.test(rawMaxScore)) {
-                const maxScoreEl = document.getElementById("max_score");
-                if (maxScoreEl) {
-                    maxScoreEl.setCustomValidity("Please enter an integer");
-                    maxScoreEl.reportValidity();
-                }
-                return;
-            }
             max_score = parseInt(rawMaxScore, 10);
             psURL += "&max_score=" + max_score;
             path += "&max_score=" + max_score;
-        }
-
-        if (min_score !== undefined && max_score !== undefined) {
-            if (max_score < min_score) {
-                const maxScoreEl = document.getElementById("max_score");
-                if (maxScoreEl) {
-                    maxScoreEl.setCustomValidity("Please enter a value greater than or equal to 'Min Score'");
-                    maxScoreEl.reportValidity();
-                }
-                return;
-            }
         }
 
         if (form.elements['since'].value.trim() !== '') {
@@ -903,14 +893,6 @@ async function search(form, until=-1, isRetry=false) {
         } else if (form.elements['until'].value.trim() !== '') {
             const parsedFormUntil = new Date(form.elements['until'].value).valueOf() / 1000;
             if (!isNaN(parsedFormUntil)) {
-                if (since !== undefined && parsedFormUntil <= since) {
-                    const untilEl = document.getElementById("until");
-                    if (untilEl) {
-                        untilEl.setCustomValidity("Please select a date later than the 'After' date");
-                        untilEl.reportValidity();
-                    }
-                    return;
-                }
                 formUntil = parsedFormUntil;
             }
         }
@@ -929,37 +911,9 @@ async function search(form, until=-1, isRetry=false) {
         }
 
         const rawLimit = form.elements['limit'].value.trim();
-        if (rawLimit === '') {
-            currentLimit = 100;
-            psURL += "&limit=100";
-            path += "&limit=100";
-        } else {
-            const limit = parseInt(rawLimit, 10);
-            const limitEl = document.getElementById("limit");
-            if (isNaN(limit) || String(limit) !== rawLimit) {
-                if (limitEl) {
-                    limitEl.setCustomValidity("Please enter an integer between 1 and 1000");
-                    limitEl.reportValidity();
-                }
-                return;
-            } else if (limit < 1) {
-                if (limitEl) {
-                    limitEl.setCustomValidity("Please select a value greater than 0");
-                    limitEl.reportValidity();
-                }
-                return;
-            } else if (limit > 1000) {
-                if (limitEl) {
-                    limitEl.setCustomValidity("Please select a value less than or equal to 1000");
-                    limitEl.reportValidity();
-                }
-                return;
-            }
-            if (limitEl) limitEl.setCustomValidity("");
-            currentLimit = limit;
-            psURL += "&limit=" + limit;
-            path += "&limit=" + limit;
-        }
+        currentLimit = (rawLimit === '') ? 100 : parseInt(rawLimit, 10);
+        psURL += "&limit=" + currentLimit;
+        path += "&limit=" + currentLimit;
 
         if (until < 0) {
             activeSearchConfig = {
@@ -972,12 +926,9 @@ async function search(form, until=-1, isRetry=false) {
                 psURL += "&until=" + formUntil;
                 path += "&until=" + formUntil;
             }
-        }
-    }
-    
-    if (until < 0) {	// Search
-        if (until == -1) {
-            history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path);
+            if (until == -1) {
+                history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path);
+            }
         }
     }
     let accessToken = parseAccessTokenInput();
@@ -1077,9 +1028,7 @@ async function search(form, until=-1, isRetry=false) {
                 `;
             } else {
                 trackEvent('error-request');
-                if (currentJsonBlobURL) {
-                    URL.revokeObjectURL(currentJsonBlobURL);
-                }
+                revokeCurrentJsonBlob();
                 const blob = new Blob([JSON.stringify(json, null, 2)], { type: "application/json" });
                 currentJsonBlobURL = URL.createObjectURL(blob);
 
@@ -1147,9 +1096,7 @@ async function search(form, until=-1, isRetry=false) {
         accumulatedResults = accumulatedResults.concat(uniqueData);
         const result_count = accumulatedResults.length;
 
-        if (currentJsonBlobURL) {
-            URL.revokeObjectURL(currentJsonBlobURL);
-        }
+        revokeCurrentJsonBlob();
         const accumulatedJson = { ...json, data: accumulatedResults };
         const blob = new Blob([JSON.stringify(accumulatedJson, null, 2)], { type: "application/json" });
         currentJsonBlobURL = URL.createObjectURL(blob);
@@ -1217,13 +1164,14 @@ function fetchMore(until) {
 function generateHTML(data, renderMarkdown, showThumbnails, hasMore = true, nextUntil = null, isEnd = false) {
     let count = 0;
     let html = "";
-    let until = (nextUntil != null) ? nextUntil : 2147483647;
+    let until = (nextUntil != null)
+        ? nextUntil
+        : (data.length > 0 && data[data.length - 1] && data[data.length - 1].created_utc != null)
+            ? data[data.length - 1].created_utc
+            : 2147483647;
     
     data.forEach(obj => {
         count += 1;
-        if (nextUntil == null && obj && obj.created_utc != null) {
-            until = obj.created_utc;
-        }
         
         let timestamp = "";
         let utcTimestamp = "";

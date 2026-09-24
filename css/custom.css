@@ -147,10 +147,6 @@ span.score {
 /* Fix for equalizing select input width in horizontal form */
 @media screen and (min-width: 769px) {
     .field-body > .field:not(.is-narrow) {
-        box-flex: 1;
-        flex-grow: 1;
-    }
-    .field-body>.field {
         flex: 1;
     }
 }
