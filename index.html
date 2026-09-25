@@ -15,13 +15,40 @@
                 <h2 class="subtitle has-text-danger has-text-centered">Powered by Pushshift</h2>
                 <form id="searchForm">
                     <div class="field">
-                        <label class="label is-uppercase has-text-grey-lighter is-size-7" for="accessToken">
-                            Access Token (<a href="https://auth.pushshift.io/authorize" target="_blank" rel="noopener noreferrer" title="Request access token from Pushshift" class="has-text-danger">Request Token</a>)
-                        </label>
+                        <div class="is-flex is-align-items-center mb-2">
+                            <label class="label is-uppercase has-text-grey-lighter is-size-7 mb-0" for="accessToken">
+                                Access Token (<a href="https://auth.pushshift.io/authorize" target="_blank" rel="noopener noreferrer" title="Request access token from Pushshift" class="has-text-danger">Request Token</a>)
+                            </label>
+                            <div class="search-tips-wrapper ml-2" id="tokenTipsWrapper">
+                                <button type="button" class="search-tips-btn" id="tokenTipsBtn" aria-label="Access token instructions" aria-expanded="false">
+                                    <svg class="search-tips-icon" width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                        <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                                    </svg>
+                                </button>
+                                <div class="search-tips-popup" id="tokenTipsPopup" role="tooltip">
+                                    <div class="search-tips-header is-flex is-justify-content-space-between is-align-items-center has-text-weight-bold has-text-white mb-2">
+                                        <span>How to Get a Token</span>
+                                        <button type="button" class="search-tips-close delete is-small" id="tokenTipsCloseBtn" aria-label="Close instructions"></button>
+                                    </div>
+                                    <ol class="token-tips-list">
+                                        <li>
+                                            Click <strong>Request Token</strong> to login to Reddit and authorize Pushshift access.
+                                        </li>
+                                        <li>
+                                            Pushshift will display raw JSON containing your <strong>Access Token</strong>. Copy it all.
+                                        </li>
+                                        <li>
+                                            Paste the copied text here.
+                                        </li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
                         <div class="control">
                             <div class="field has-addons">
                                 <div class="control is-expanded">
-                                    <input id="accessToken" name="accessToken" type="password" class="input" placeholder="Required" required autocomplete="off" spellcheck="false" onfocus="this.type='text'" onblur="this.type='password'" oninvalid="this.setCustomValidity('Please enter a valid Pushshift access token')" oninput="this.setCustomValidity('')">
+                                    <input id="accessToken" name="accessToken" type="password" class="input" placeholder="Required (paste token or full JSON)" required autocomplete="off" spellcheck="false" onfocus="this.type='text'" onblur="this.type='password'" oninvalid="this.setCustomValidity('Please enter a valid Pushshift access token')" oninput="this.setCustomValidity('')">
                                 </div>
                                 <div class="control">
                                     <a class="button is-danger is-outlined" onclick="clearAccessToken(true)" title="Clear cached access token">Clear</a>

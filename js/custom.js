@@ -252,11 +252,11 @@ function resetForm() {
     }
 }
 
-function initSearchTips() {
-    const btn = document.getElementById("searchTipsBtn");
-    const wrapper = document.getElementById("searchTipsWrapper");
-    const popup = document.getElementById("searchTipsPopup");
-    const closeBtn = document.getElementById("searchTipsCloseBtn");
+function setupTipsPopup({ btnId, wrapperId, popupId, closeBtnId }) {
+    const btn = document.getElementById(btnId);
+    const wrapper = document.getElementById(wrapperId);
+    const popup = document.getElementById(popupId);
+    const closeBtn = document.getElementById(closeBtnId);
     if (!btn || !wrapper) return;
 
     const closeTips = (restoreFocus = false) => {
@@ -303,6 +303,21 @@ function initSearchTips() {
         if (e.key === "Escape" && wrapper.classList.contains("is-open")) {
             closeTips(true);
         }
+    });
+}
+
+function initSearchTips() {
+    setupTipsPopup({
+        btnId: "searchTipsBtn",
+        wrapperId: "searchTipsWrapper",
+        popupId: "searchTipsPopup",
+        closeBtnId: "searchTipsCloseBtn"
+    });
+    setupTipsPopup({
+        btnId: "tokenTipsBtn",
+        wrapperId: "tokenTipsWrapper",
+        popupId: "tokenTipsPopup",
+        closeBtnId: "tokenTipsCloseBtn"
     });
 }
 
@@ -670,6 +685,22 @@ if (tokenEl) {
     tokenEl.addEventListener('invalid', () => {
         tokenEl.setCustomValidity("Please enter a valid Pushshift access token");
     });
+
+    const handleTokenParse = () => {
+        const cleaned = parseAccessTokenInput();
+        if (cleaned) {
+            tokenEl.setCustomValidity('');
+            try {
+                localStorage.setItem("accessToken", cleaned);
+            } catch {}
+        } else {
+            try {
+                localStorage.removeItem("accessToken");
+            } catch {}
+        }
+    };
+
+    tokenEl.addEventListener('change', handleTokenParse);
 }
 
 function getSettings() {

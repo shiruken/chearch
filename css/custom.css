@@ -203,8 +203,14 @@ span.score {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    line-height: 1;
+    position: relative;
+    top: 1px;
     color: #7A7A7A;
     transition: color 0.15s ease-in-out;
+}
+.search-tips-icon {
+    display: block;
 }
 .search-tips-btn:hover,
 .search-tips-btn:focus,
@@ -230,6 +236,14 @@ span.score {
     text-transform: none;
     font-weight: normal;
     pointer-events: auto;
+}
+.search-tips-popup::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
 }
 .search-tips-wrapper:hover .search-tips-popup,
 .search-tips-wrapper:focus-within .search-tips-popup,
@@ -272,6 +286,24 @@ span.score {
 .search-tips-popup strong {
     color: #FFFFFF;
 }
+.token-tips-list {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: #DBDBDB;
+    font-size: 0.73rem;
+    line-height: 1.45;
+}
+.token-tips-list li {
+    padding: 0.3rem 0;
+}
+.token-tips-list code {
+    background-color: #2D3748;
+    color: #F14668;
+    padding: 0.15rem 0.35rem;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
 .search-tips-close {
     display: none;
     vertical-align: middle;
@@ -308,7 +340,8 @@ span.score {
     .search-tips-close {
         display: inline-block;
     }
-    .search-tips-list li {
+    .search-tips-list li,
+    .token-tips-list li {
         padding: 0.4rem 0;
     }
 }
