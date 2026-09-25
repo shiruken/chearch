@@ -55,6 +55,7 @@ if (resetBtn) {
 function validateAccessToken() {
     const tokenEl = document.getElementById("accessToken");
     if (!tokenEl) return true;
+    parseAccessTokenInput();
     if (!tokenEl.value.trim()) {
         tokenEl.setCustomValidity("Please enter a valid Pushshift access token");
         return false;
@@ -274,6 +275,15 @@ function setupTipsPopup({ btnId, wrapperId, popupId, closeBtnId }) {
         }
         const isOpen = wrapper.classList.toggle("is-open");
         btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        if (isOpen && typeof document.querySelectorAll === "function") {
+            document.querySelectorAll(".search-tips-wrapper.is-open").forEach(other => {
+                if (other !== wrapper) {
+                    other.classList.remove("is-open");
+                    const otherBtn = (other && typeof other.querySelector === "function") ? other.querySelector(".search-tips-btn") : null;
+                    if (otherBtn) otherBtn.setAttribute("aria-expanded", "false");
+                }
+            });
+        }
     });
 
     if (closeBtn) {
@@ -754,7 +764,7 @@ function applySearchHighlighting(targetElements, term) {
         let searchArray = term
             .split(/[\s,]+/)
             .filter(token => token && !token.startsWith('-') && token !== '|' && token !== '+')
-            .map(token => token.replace(/^\+/, ''))
+            .map(token => token.replace(/^\+/, '').replace(/^["']+|["']+$/g, ''))
             .filter(Boolean);
         if (searchArray.length > 0) {
             instance.mark(searchArray, {
@@ -809,6 +819,8 @@ function injectMediaExpanderButtons(cards) {
                     button.type = "button";
                     button.classList.add("delete", "closed");
                     button.setAttribute("onclick", "directExpand(this)");
+                    button.setAttribute("aria-label", "Expand media");
+                    button.setAttribute("title", "Expand media");
                     link.after(button);
                 }
             }
@@ -1144,7 +1156,7 @@ async function search(form, until=-1, isRetry=false) {
                 const errorMsg = (typeof detail === "string" && detail.length > 0) ? detail : "Pushshift May Be Down";
                 document.getElementById("apiInfo").innerHTML = `
                     <div>
-                        <span class="has-text-grey-lighter has-text-weight-semibold">Search Error: ${errorMsg}</span>
+                        <span class="has-text-grey-lighter has-text-weight-semibold">Search Error: ${escapeHTML(errorMsg)}</span>
                     </div>
                     <div class="is-size-7 mt-1">
                         <a href="${currentJsonBlobURL}" target="_blank" rel="noopener noreferrer" title="View raw JSON response" class="has-text-grey-light">View JSON</a>
@@ -1452,10 +1464,13 @@ function generateHTML(data, renderMarkdown, showThumbnails, hasMore = true, next
             `;
 
             if (!obj.is_self) {  // Link Post
-                const escapedUrl = escapeHTML(obj.url);
+                const rawUrl = (typeof obj.url === "string") ? obj.url.trim() : "";
+                const isSafeUrl = /^(?:https?:\/\/|\/)/i.test(rawUrl);
+                const safeHref = isSafeUrl ? escapeHTML(rawUrl) : "#";
+                const displayUrl = escapeHTML(rawUrl);
                 html += `
                             <p class="expand wrap">
-                                <a href="${escapedUrl}" target="_blank" rel="noopener noreferrer" title="View linked URL" class="has-text-danger">${escapedUrl}</a>
+                                <a href="${safeHref}" target="_blank" rel="noopener noreferrer" title="View linked URL" class="has-text-danger">${displayUrl}</a>
                             </p>
                 `;
             }
@@ -1479,7 +1494,7 @@ function generateHTML(data, renderMarkdown, showThumbnails, hasMore = true, next
 
     if (hasMore && count > 0 && until != null && until < 2147483647) {
         html += `
-            <button type="submit" class="button is-danger is-fullwidth my-5" 
+            <button type="button" class="button is-danger is-fullwidth my-5" 
             id="fetch-${until}" data-umami-event="more-button" onclick="fetchMore(${until})">Fetch More</button>
         `;
     } else if (isEnd) {
@@ -1604,9 +1619,21 @@ function directExpand(button) {
             span.appendChild(img);
         }
         button.after(span);
+        button.setAttribute("aria-label", "Collapse media");
+        button.setAttribute("title", "Collapse media");
     } else {
         let span = button.nextElementSibling;
-        span.remove();
+        if (span) {
+            const video = span.querySelector("video");
+            if (video) {
+                video.pause();
+                video.removeAttribute("src");
+                video.load();
+            }
+            span.remove();
+        }
+        button.setAttribute("aria-label", "Expand media");
+        button.setAttribute("title", "Expand media");
     }
     button.classList.toggle("closed");
 }
