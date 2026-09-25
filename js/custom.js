@@ -1149,7 +1149,30 @@ async function search(form, until=-1, isRetry=false) {
             ? json.data[json.data.length - 1].created_utc
             : null;
 
-        const hasMore = (json.data.length >= currentLimit) && (uniqueData.length > 0);
+        const esHits = json.metadata?.es?.hits?.total;
+        const esTotal = (typeof esHits === "number") ? esHits : esHits?.value;
+        const esRelation = esHits?.relation;
+
+        let hasMore = false;
+        if (uniqueData.length > 0 && json.data.length > 0) {
+            if (typeof esTotal === "number") {
+                if (esRelation === "gte") {
+                    // Capped total hits (e.g. 10,000+). There are guaranteed to be more hits remaining.
+                    hasMore = true;
+                } else if (esRelation === "eq" || !esRelation) {
+                    // Exact total hits for this request window. If esTotal > currentLimit, more hits exist in ES.
+                    hasMore = esTotal > currentLimit;
+                }
+            } else if (json.data.length >= currentLimit) {
+                hasMore = true;
+            } else {
+                // Metadata missing: Pushshift backend post-processing (cross-shard deduplication,
+                // quarantined/banned subreddits, DMCA takedowns) often filters 1-5 posts from a full batch.
+                // Allow a tolerance threshold so batches of 95-99 on a limit of 100 still offer pagination.
+                const filterTolerance = Math.min(5, Math.ceil(currentLimit * 0.05));
+                hasMore = (currentLimit - json.data.length) <= filterTolerance;
+            }
+        }
         const isEnd = !hasMore && ((accumulatedResults.length + uniqueData.length) > 0);
 
         accumulatedResults = accumulatedResults.concat(uniqueData);
@@ -1219,10 +1242,13 @@ async function search(form, until=-1, isRetry=false) {
         }
 
         if (until < 0) {
+            const redactedNotice = (result_count === 0 && typeof esTotal === "number" && esTotal > 0)
+                ? " - These results have been redacted by Pushshift"
+                : "";
             document.getElementById("apiInfo").innerHTML = `
                 <div class="has-text-weight-bold has-text-white">
                     ${until == -2 ? "<span class='has-text-weight-normal mr-1'>Token Refreshed -</span>" : ""}
-                    <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"}
+                    <span id="result_count">${result_count}</span> Result${result_count == 1 ? "" : "s"}${redactedNotice}
                 </div>
             `;
         } else {
