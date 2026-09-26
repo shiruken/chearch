@@ -816,7 +816,7 @@ function injectMediaExpanderButtons(cards) {
         for (const link of links) {
             if (link.nextElementSibling == null || link.nextElementSibling.tagName != "BUTTON") {
                 const url = link.href;
-                if (extensions.some(extension => url.includes(extension))) {
+                if (extensions.some(extension => url.includes(extension)) || url.includes("v.redd.it/")) {
                     const button = document.createElement("button");
                     button.type = "button";
                     button.classList.add("delete", "closed");
@@ -1620,17 +1620,58 @@ function directExpand(button) {
     if (button.classList.contains("closed")) {
         let span = document.createElement("span");
         span.style.display = "block";
-        if (url.includes(".gifv") || url.includes(".mp4")) { // Video
+        if (url.includes(".gifv") || url.includes(".mp4") || url.includes("v.redd.it/")) { // Video
             url = url.replace("gifv", "mp4");
             let video = document.createElement("video");
             video.controls = true;
             video.autoplay = true;
             video.loop = true;
             video.muted = true;
-            let source = document.createElement("source");
-            source.src = url;
-            source.type = "video/mp4";
-            video.appendChild(source);
+            video.playsInline = true;
+
+            const redditVideoMatch = url.match(/(?:packaged-media|preview)\.redd\.it\/([a-zA-Z0-9]+)/) || url.match(/v\.redd\.it\/([a-zA-Z0-9]+)/);
+            if (redditVideoMatch) {
+                const mediaId = redditVideoMatch[1];
+                let resList = ["720", "480", "360", "220"];
+                const resMatch = url.match(/res_(\d+)p/);
+                if (resMatch && resList.includes(resMatch[1])) {
+                    resList = [resMatch[1], ...resList.filter(r => r !== resMatch[1])];
+                }
+                for (const res of resList) {
+                    const source = document.createElement("source");
+                    source.src = `https://v.redd.it/${mediaId}/CMAF_${res}.mp4`;
+                    source.type = "video/mp4";
+                    video.appendChild(source);
+                }
+                const legacySource = document.createElement("source");
+                legacySource.src = `https://v.redd.it/${mediaId}/DASH_480.mp4`;
+                legacySource.type = "video/mp4";
+                video.appendChild(legacySource);
+            } else {
+                let source = document.createElement("source");
+                source.src = url;
+                source.type = "video/mp4";
+                video.appendChild(source);
+            }
+
+            const showVideoFallback = () => {
+                const notice = document.createElement("p");
+                notice.className = "is-size-7 has-text-grey my-1";
+                notice.textContent = "Video playback unavailable. Try opening the link directly.";
+                if (video.replaceWith) {
+                    video.replaceWith(notice);
+                } else if (video.parentNode) {
+                    video.parentNode.replaceChild(notice, video);
+                }
+            };
+
+            const sources = video.querySelectorAll ? video.querySelectorAll("source") : [];
+            if (sources.length > 0) {
+                sources[sources.length - 1].addEventListener("error", showVideoFallback);
+            } else {
+                video.addEventListener("error", showVideoFallback);
+            }
+
             span.appendChild(video);
         } else { // Image
             url = url.replace("preview.redd.it", "i.redd.it");
@@ -1638,6 +1679,16 @@ function directExpand(button) {
             img.src = url;
             img.alt = "Expanded media";
             img.loading = "lazy";
+            img.addEventListener("error", () => {
+                const notice = document.createElement("p");
+                notice.className = "is-size-7 has-text-grey my-1";
+                notice.textContent = "Image unavailable. Try opening the link directly.";
+                if (img.replaceWith) {
+                    img.replaceWith(notice);
+                } else if (img.parentNode) {
+                    img.parentNode.replaceChild(notice, img);
+                }
+            });
             span.appendChild(img);
         }
         button.after(span);
