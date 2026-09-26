@@ -419,3 +419,35 @@ span.score {
     }
 }
 
+.gallery-wrapper {
+    max-width: 100%;
+}
+.gallery-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: 100%;
+}
+.gallery-btn {
+    background-color: #2D3748;
+    color: #F5F5F5;
+    border: 1px solid #4A5568;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+.gallery-btn:hover:not(:disabled) {
+    background-color: #4A5568;
+    color: #FFFFFF;
+}
+.gallery-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.gallery-caption {
+    word-break: break-word;
+    max-width: 100%;
+}
+

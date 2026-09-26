@@ -817,13 +817,14 @@ function injectMediaExpanderButtons(cards) {
         for (const link of links) {
             if (link.nextElementSibling == null || link.nextElementSibling.tagName != "BUTTON") {
                 const url = link.href;
-                if (extensions.some(extension => url.includes(extension)) || url.includes("v.redd.it/") || isRedditVideoComment(url)) {
+                const isGallery = (link.hasAttribute && link.hasAttribute("data-gallery")) || /(?:reddit\.com|redd\.it)\/gallery\/[a-zA-Z0-9]+/i.test(url);
+                if (extensions.some(extension => url.includes(extension)) || url.includes("v.redd.it/") || isRedditVideoComment(url) || isGallery) {
                     const button = document.createElement("button");
                     button.type = "button";
                     button.classList.add("delete", "closed");
                     button.setAttribute("onclick", "directExpand(this)");
-                    button.setAttribute("aria-label", "Expand media");
-                    button.setAttribute("title", "Expand media");
+                    button.setAttribute("aria-label", isGallery ? "Expand gallery" : "Expand media");
+                    button.setAttribute("title", isGallery ? "Expand gallery" : "Expand media");
                     link.after(button);
                 }
             }
@@ -1489,9 +1490,39 @@ function generateHTML(data, renderMarkdown, showThumbnails, hasMore = true, next
                 const isSafeUrl = /^(?:https?:\/\/|\/)/i.test(rawUrl);
                 const safeHref = isSafeUrl ? escapeHTML(rawUrl) : "#";
                 const displayUrl = escapeHTML(rawUrl);
+
+                let galleryAttr = "";
+                if ((obj.is_gallery || rawUrl.includes("/gallery/")) && obj.media_metadata) {
+                    const items = (obj.gallery_data && Array.isArray(obj.gallery_data.items))
+                        ? obj.gallery_data.items
+                        : Object.keys(obj.media_metadata).map(id => ({ media_id: id }));
+
+                    const galleryItems = [];
+                    for (const item of items) {
+                        const meta = obj.media_metadata[item.media_id];
+                        if (!meta || meta.status !== "valid") continue;
+                        let src = "";
+                        if (meta.s && meta.s.u) {
+                            src = meta.s.u.split("?")[0].replace("preview.redd.it", "i.redd.it");
+                        } else if (meta.m) {
+                            const ext = meta.m.includes("png") ? "png" : meta.m.includes("gif") ? "gif" : "jpg";
+                            src = `https://i.redd.it/${item.media_id}.${ext}`;
+                        }
+                        if (src) {
+                            galleryItems.push({
+                                src: src,
+                                caption: item.caption || ""
+                            });
+                        }
+                    }
+                    if (galleryItems.length > 0) {
+                        galleryAttr = ` data-gallery="${escapeHTML(JSON.stringify(galleryItems))}"`;
+                    }
+                }
+
                 html += `
                             <p class="expand wrap">
-                                <a href="${safeHref}" target="_blank" rel="noopener noreferrer" title="View linked URL" class="has-text-danger">${displayUrl}</a>
+                                <a href="${safeHref}" target="_blank" rel="noopener noreferrer" title="View linked URL" class="has-text-danger"${galleryAttr}>${displayUrl}</a>
                             </p>
                 `;
             }
@@ -1618,11 +1649,176 @@ function parseAccessTokenInput() {
 function directExpand(button) {
     let link = button.previousElementSibling;
     let url = link.href;
+    const isGallery = (link.hasAttribute && link.hasAttribute("data-gallery")) || /(?:reddit\.com|redd\.it)\/gallery\/[a-zA-Z0-9]+/i.test(url);
     if (button.classList.contains("closed")) {
         let span = document.createElement("span");
         span.style.display = "block";
         const isRedditVideoComment = /(?:reddit\.com|redd\.it)\/(?:link\/[a-zA-Z0-9]+\/)?video\/[a-zA-Z0-9]+/i.test(url);
-        if (url.includes(".gifv") || url.includes(".mp4") || url.includes("v.redd.it/") || isRedditVideoComment) { // Video
+        if (isGallery) {
+            let galleryItems = [];
+            if (link.getAttribute && link.getAttribute("data-gallery")) {
+                try {
+                    galleryItems = JSON.parse(link.getAttribute("data-gallery") || "[]");
+                } catch(e) {}
+            }
+            if (galleryItems.length === 0) {
+                const notice = document.createElement("p");
+                notice.className = "is-size-7 has-text-grey my-1";
+                notice.textContent = "Gallery unavailable. Try opening the link directly.";
+                span.appendChild(notice);
+            } else if (galleryItems.length === 1) {
+                let img = document.createElement("img");
+                img.src = galleryItems[0].src;
+                img.alt = galleryItems[0].caption || "Gallery image";
+                img.loading = "lazy";
+                img.addEventListener("error", () => {
+                    const notice = document.createElement("p");
+                    notice.className = "is-size-7 has-text-grey my-1";
+                    notice.textContent = "Image unavailable. Try opening the link directly.";
+                    if (img.replaceWith) {
+                        img.replaceWith(notice);
+                    } else if (img.parentNode) {
+                        img.parentNode.replaceChild(notice, img);
+                    }
+                });
+                span.appendChild(img);
+                if (galleryItems[0].caption) {
+                    const cap = document.createElement("p");
+                    cap.className = "is-size-7 has-text-grey-light mt-1";
+                    cap.textContent = galleryItems[0].caption;
+                    span.appendChild(cap);
+                }
+            } else {
+                let currentIndex = 0;
+                const wrapper = document.createElement("div");
+                wrapper.className = "gallery-wrapper my-2";
+                wrapper.tabIndex = 0;
+
+                const nav = document.createElement("div");
+                nav.className = "gallery-nav mb-2 is-size-7";
+
+                const controls = document.createElement("div");
+                controls.className = "gallery-controls";
+
+                const prevBtn = document.createElement("button");
+                prevBtn.type = "button";
+                prevBtn.className = "gallery-btn gallery-prev mr-1";
+                prevBtn.textContent = "◀ Prev";
+                prevBtn.disabled = true;
+                prevBtn.setAttribute("aria-label", "Previous image");
+
+                const nextBtn = document.createElement("button");
+                nextBtn.type = "button";
+                nextBtn.className = "gallery-btn gallery-next";
+                nextBtn.textContent = "Next ▶";
+                nextBtn.disabled = (galleryItems.length <= 1);
+                nextBtn.setAttribute("aria-label", "Next image");
+
+                controls.appendChild(prevBtn);
+                controls.appendChild(nextBtn);
+                nav.appendChild(controls);
+
+                const counter = document.createElement("span");
+                counter.className = "gallery-counter has-text-grey-light has-text-weight-semibold";
+                counter.textContent = `1 of ${galleryItems.length}`;
+                nav.appendChild(counter);
+
+                wrapper.appendChild(nav);
+
+                const mediaDiv = document.createElement("div");
+                mediaDiv.className = "gallery-media";
+
+                let img = document.createElement("img");
+                img.src = galleryItems[0].src;
+                img.alt = galleryItems[0].caption || `Gallery image 1 of ${galleryItems.length}`;
+                img.loading = "lazy";
+                const handleImgError = () => {
+                    const notice = document.createElement("p");
+                    notice.className = "is-size-7 has-text-grey my-1";
+                    notice.textContent = "Image unavailable. Try opening the link directly.";
+                    if (img.replaceWith) {
+                        img.replaceWith(notice);
+                    } else if (img.parentNode) {
+                        img.parentNode.replaceChild(notice, img);
+                    }
+                };
+                img.addEventListener("error", handleImgError);
+                mediaDiv.appendChild(img);
+                wrapper.appendChild(mediaDiv);
+
+                const caption = document.createElement("p");
+                caption.className = "gallery-caption is-size-7 has-text-grey-light mt-1";
+                caption.textContent = galleryItems[0].caption || "";
+                if (!galleryItems[0].caption) {
+                    caption.style.display = "none";
+                }
+                wrapper.appendChild(caption);
+
+                const preloadImage = (index) => {
+                    if (index >= 0 && index < galleryItems.length && typeof Image !== "undefined") {
+                        const pre = new Image();
+                        pre.src = galleryItems[index].src;
+                    }
+                };
+                preloadImage(1);
+
+                const updateGalleryView = () => {
+                    const item = galleryItems[currentIndex];
+                    img.src = item.src;
+                    img.alt = item.caption || `Gallery image ${currentIndex + 1} of ${galleryItems.length}`;
+                    if (mediaDiv.contains && !mediaDiv.contains(img)) {
+                        mediaDiv.innerHTML = "";
+                        mediaDiv.appendChild(img);
+                    }
+                    counter.textContent = `${currentIndex + 1} of ${galleryItems.length}`;
+                    prevBtn.disabled = (currentIndex === 0);
+                    nextBtn.disabled = (currentIndex === galleryItems.length - 1);
+                    if (item.caption) {
+                        caption.textContent = item.caption;
+                        caption.style.display = "";
+                    } else {
+                        caption.textContent = "";
+                        caption.style.display = "none";
+                    }
+                    preloadImage(currentIndex + 1);
+                    preloadImage(currentIndex - 1);
+                };
+
+                prevBtn.addEventListener("click", (e) => {
+                    if (e && e.stopPropagation) e.stopPropagation();
+                    if (currentIndex > 0) {
+                        currentIndex--;
+                        updateGalleryView();
+                    }
+                });
+
+                nextBtn.addEventListener("click", (e) => {
+                    if (e && e.stopPropagation) e.stopPropagation();
+                    if (currentIndex < galleryItems.length - 1) {
+                        currentIndex++;
+                        updateGalleryView();
+                    }
+                });
+
+                wrapper.addEventListener("keydown", (e) => {
+                    if (e.key === "ArrowLeft") {
+                        e.preventDefault();
+                        if (currentIndex > 0) {
+                            currentIndex--;
+                            updateGalleryView();
+                        }
+                    } else if (e.key === "ArrowRight") {
+                        e.preventDefault();
+                        if (currentIndex < galleryItems.length - 1) {
+                            currentIndex++;
+                            updateGalleryView();
+                        }
+                    }
+                });
+
+                span.appendChild(wrapper);
+            }
+        } else if (url.includes(".gifv") || url.includes(".mp4") || url.includes("v.redd.it/") || isRedditVideoComment) { // Video
             url = url.replace("gifv", "mp4");
             let video = document.createElement("video");
             video.controls = true;
@@ -1696,8 +1892,8 @@ function directExpand(button) {
             span.appendChild(img);
         }
         button.after(span);
-        button.setAttribute("aria-label", "Collapse media");
-        button.setAttribute("title", "Collapse media");
+        button.setAttribute("aria-label", isGallery ? "Collapse gallery" : "Collapse media");
+        button.setAttribute("title", isGallery ? "Collapse gallery" : "Collapse media");
     } else {
         let span = button.nextElementSibling;
         if (span) {
@@ -1712,8 +1908,8 @@ function directExpand(button) {
             }
             span.remove();
         }
-        button.setAttribute("aria-label", "Expand media");
-        button.setAttribute("title", "Expand media");
+        button.setAttribute("aria-label", isGallery ? "Expand gallery" : "Expand media");
+        button.setAttribute("title", isGallery ? "Expand gallery" : "Expand media");
     }
     button.classList.toggle("closed");
 }
