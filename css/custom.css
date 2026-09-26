@@ -60,8 +60,9 @@ span.score {
 }
 .delete, .delete:focus {
     background-color: #F14668; /* .has-background-danger */
-    margin-left: 3px;
-    vertical-align: super;
+    margin: 0 4px;
+    vertical-align: middle;
+    top: -2px;
 }
 .delete:hover {
     background-color: #EE1742; /* .has-background-danger:hover */
@@ -308,6 +309,7 @@ span.score {
     display: none;
     vertical-align: middle;
     margin: 0;
+    top: 0;
 }
 @media screen and (max-width: 768px) {
     .search-tips-wrapper:hover .search-tips-popup {
