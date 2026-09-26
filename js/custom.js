@@ -773,11 +773,13 @@ function applySearchHighlighting(targetElements, term) {
             });
         }
     } else {
-        let cleanTerm = term.replaceAll('"', "");
-        instance.mark(cleanTerm, {
-            "accuracy": "partially",
-            "separateWordSearch": false
-        });
+        let cleanTerm = term.replaceAll('"', "").trim();
+        if (cleanTerm) {
+            instance.mark(cleanTerm, {
+                "accuracy": "partially",
+                "separateWordSearch": false
+            });
+        }
     }
 }
 
@@ -849,6 +851,17 @@ function updateMarkdownRendering() {
 
         const markdownContainer = card.querySelector(".content.markdown");
         if (markdownContainer) {
+            if (markdownContainer.querySelectorAll) {
+                const videos = markdownContainer.querySelectorAll("video");
+                videos.forEach(video => {
+                    video.pause();
+                    if (video.querySelectorAll) {
+                        video.querySelectorAll("source").forEach(s => s.removeAttribute("src"));
+                    }
+                    video.removeAttribute("src");
+                    video.load();
+                });
+            }
             markdownContainer.innerHTML = formatText(rawText, renderMarkdown);
         }
     }
@@ -1057,7 +1070,11 @@ async function search(form, until=-1, isRetry=false) {
     let highlight = form.elements['highlight'].checked;
     let showThumbnails = form.elements['showThumbnails'].checked;
     try {
-        localStorage.setItem("accessToken", accessToken);
+        if (accessToken) {
+            localStorage.setItem("accessToken", accessToken);
+        } else {
+            localStorage.removeItem("accessToken");
+        }
         localStorage.setItem("exactAuthorMatch", exactAuthorMatch);
         localStorage.setItem("renderMarkdown", renderMarkdown);
         localStorage.setItem("highlight", highlight);
@@ -1388,9 +1405,12 @@ function generateHTML(data, renderMarkdown, showThumbnails, hasMore = true, next
         const permalink = obj.permalink ? encodeURI(obj.permalink) : "";
         let redditUrl;
         if ("link_id" in obj) {
+            const cleanLinkId = obj.link_id ? String(obj.link_id).replace("t3_", "") : "";
             redditUrl = obj.permalink
                 ? "https://reddit.com" + permalink
-                : `https://reddit.com/comments/${encodeURIComponent(obj.link_id.replace("t3_", ""))}/-/${encodeURIComponent(obj.id)}`;
+                : (cleanLinkId
+                    ? `https://reddit.com/comments/${encodeURIComponent(cleanLinkId)}/-/${encodeURIComponent(obj.id)}`
+                    : `https://reddit.com/comments/${encodeURIComponent(obj.id)}`);
         } else {
             redditUrl = obj.permalink
                 ? "https://reddit.com" + permalink
@@ -1616,6 +1636,8 @@ function directExpand(button) {
             url = url.replace("preview.redd.it", "i.redd.it");
             let img = document.createElement("img");
             img.src = url;
+            img.alt = "Expanded media";
+            img.loading = "lazy";
             span.appendChild(img);
         }
         button.after(span);
@@ -1627,6 +1649,9 @@ function directExpand(button) {
             const video = span.querySelector("video");
             if (video) {
                 video.pause();
+                if (video.querySelectorAll) {
+                    video.querySelectorAll("source").forEach(s => s.removeAttribute("src"));
+                }
                 video.removeAttribute("src");
                 video.load();
             }
@@ -1639,8 +1664,11 @@ function directExpand(button) {
 }
 
 function hideThumbnail(element) {
+    if (!element || typeof element.closest !== "function") return;
     let thumbnail = element.closest('.media-left');
-    thumbnail.style.display = 'none';
+    if (thumbnail) {
+        thumbnail.style.display = 'none';
+    }
 }
 
 function trackEvent(eventName, eventData) {
