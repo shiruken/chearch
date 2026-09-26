@@ -811,12 +811,13 @@ function updateHighlighting() {
 
 function injectMediaExpanderButtons(cards) {
     const extensions = [".jpg", ".jpeg", ".png", ".gif", ".gifv", ".mp4"];
+    const isRedditVideoComment = url => /(?:reddit\.com|redd\.it)\/(?:link\/[a-zA-Z0-9]+\/)?video\/[a-zA-Z0-9]+/i.test(url);
     for (const card of cards) {
         const links = card.querySelectorAll(".expand a");
         for (const link of links) {
             if (link.nextElementSibling == null || link.nextElementSibling.tagName != "BUTTON") {
                 const url = link.href;
-                if (extensions.some(extension => url.includes(extension)) || url.includes("v.redd.it/")) {
+                if (extensions.some(extension => url.includes(extension)) || url.includes("v.redd.it/") || isRedditVideoComment(url)) {
                     const button = document.createElement("button");
                     button.type = "button";
                     button.classList.add("delete", "closed");
@@ -1620,7 +1621,8 @@ function directExpand(button) {
     if (button.classList.contains("closed")) {
         let span = document.createElement("span");
         span.style.display = "block";
-        if (url.includes(".gifv") || url.includes(".mp4") || url.includes("v.redd.it/")) { // Video
+        const isRedditVideoComment = /(?:reddit\.com|redd\.it)\/(?:link\/[a-zA-Z0-9]+\/)?video\/[a-zA-Z0-9]+/i.test(url);
+        if (url.includes(".gifv") || url.includes(".mp4") || url.includes("v.redd.it/") || isRedditVideoComment) { // Video
             url = url.replace("gifv", "mp4");
             let video = document.createElement("video");
             video.controls = true;
@@ -1629,10 +1631,12 @@ function directExpand(button) {
             video.muted = true;
             video.playsInline = true;
 
-            const redditVideoMatch = url.match(/(?:packaged-media|preview)\.redd\.it\/([a-zA-Z0-9]+)/) || url.match(/v\.redd\.it\/([a-zA-Z0-9]+)/);
+            const redditVideoMatch = url.match(/(?:packaged-media|preview)\.redd\.it\/([a-zA-Z0-9]+)/)
+                || url.match(/v\.redd\.it\/([a-zA-Z0-9]+)/)
+                || url.match(/(?:reddit\.com|redd\.it)\/(?:link\/[a-zA-Z0-9]+\/)?video\/([a-zA-Z0-9]+)/i);
             if (redditVideoMatch) {
                 const mediaId = redditVideoMatch[1];
-                let resList = ["720", "480", "360", "220"];
+                let resList = ["720", "1080", "480", "360", "220"];
                 const resMatch = url.match(/res_(\d+)p/);
                 if (resMatch && resList.includes(resMatch[1])) {
                     resList = [resMatch[1], ...resList.filter(r => r !== resMatch[1])];
