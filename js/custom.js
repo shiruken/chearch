@@ -1063,6 +1063,7 @@ async function search(form, until=-1, isRetry=false) {
             }
             if (until == -1) {
                 history.pushState(Date.now(), "Reddit Search - Results", window.location.pathname + path);
+                trackEvent('search-button');
             }
         }
     }
