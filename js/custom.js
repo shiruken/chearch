@@ -1459,31 +1459,7 @@ function generateHTML(data, renderMarkdown, showThumbnails, hasMore = true, next
             `;
         } else {  // Post
             const formattedSelftext = formatText(obj.selftext, renderMarkdown);
-            const mediaMargin = !formattedSelftext ? "mb-3" : "mb-2";
-
-            html += `
-                    <div class="media ${mediaMargin}">
-            `;
-
-            if ("thumbnail" in obj && typeof obj.thumbnail === "string" && obj.thumbnail.startsWith("http")) {
-                const thumbUrl = escapeHTML(obj.thumbnail.replace(/&amp;/g, "&"));
-                html += `
-                        <div class="media-left">
-                            <figure class="image is-96x96">
-                                <a href="${redditUrl}" target="_blank" rel="noopener noreferrer" title="View on Reddit">
-                                    <img src="${thumbUrl}" alt="Thumbnail" onerror="hideThumbnail(this)">
-                                </a>
-                            </figure>
-                        </div>
-                `;
-            }
-
-            html += `
-                        <div class="media-content">
-                            <p class="post-title">
-                                <a href="${redditUrl}" target="_blank" rel="noopener noreferrer" class="has-text-light has-text-weight-bold">${escapeHTML(obj.title)}</a>
-                            </p>
-            `;
+            let linkHtml = "";
 
             if (!obj.is_self) {  // Link Post
                 const rawUrl = (typeof obj.url === "string") ? obj.url.trim() : "";
@@ -1520,16 +1496,41 @@ function generateHTML(data, renderMarkdown, showThumbnails, hasMore = true, next
                     }
                 }
 
+                const linkMargin = formattedSelftext ? "mb-2" : "mb-3";
+                linkHtml = `
+                    <p class="expand wrap ${linkMargin}">
+                        <a href="${safeHref}" target="_blank" rel="noopener noreferrer" title="View linked URL" class="has-text-danger"${galleryAttr}>${displayUrl}</a>
+                    </p>
+                `;
+            }
+
+            const mediaMargin = !formattedSelftext ? "mb-3" : "mb-2";
+
+            html += `
+                    <div class="media ${mediaMargin}">
+            `;
+
+            if ("thumbnail" in obj && typeof obj.thumbnail === "string" && obj.thumbnail.startsWith("http")) {
+                const thumbUrl = escapeHTML(obj.thumbnail.replace(/&amp;/g, "&"));
                 html += `
-                            <p class="expand wrap">
-                                <a href="${safeHref}" target="_blank" rel="noopener noreferrer" title="View linked URL" class="has-text-danger"${galleryAttr}>${displayUrl}</a>
-                            </p>
+                        <div class="media-left">
+                            <figure class="image is-96x96">
+                                <a href="${redditUrl}" target="_blank" rel="noopener noreferrer" title="View on Reddit">
+                                    <img src="${thumbUrl}" alt="Thumbnail" loading="lazy" onerror="hideThumbnail(this)">
+                                </a>
+                            </figure>
+                        </div>
                 `;
             }
 
             html += `
+                        <div class="media-content">
+                            <p class="post-title">
+                                <a href="${redditUrl}" target="_blank" rel="noopener noreferrer" class="has-text-light has-text-weight-bold">${escapeHTML(obj.title)}</a>
+                            </p>
                         </div>
                     </div>
+                    ${linkHtml}
                     ${formattedSelftext ? `<div class="content mb-3 markdown expand wrap">${formattedSelftext}</div>` : ""}
             `;
         }
@@ -1816,6 +1817,41 @@ function directExpand(button) {
                     }
                 });
 
+                let touchStartX = 0;
+                let touchStartY = 0;
+                let touchEndX = 0;
+                let touchEndY = 0;
+
+                wrapper.addEventListener("touchstart", (e) => {
+                    if (e.touches && e.touches.length === 1) {
+                        touchStartX = e.touches[0].clientX;
+                        touchStartY = e.touches[0].clientY;
+                        touchEndX = touchStartX;
+                        touchEndY = touchStartY;
+                    }
+                }, { passive: true });
+
+                wrapper.addEventListener("touchmove", (e) => {
+                    if (e.touches && e.touches.length === 1) {
+                        touchEndX = e.touches[0].clientX;
+                        touchEndY = e.touches[0].clientY;
+                    }
+                }, { passive: true });
+
+                wrapper.addEventListener("touchend", () => {
+                    const diffX = touchEndX - touchStartX;
+                    const diffY = touchEndY - touchStartY;
+                    if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
+                        if (diffX < 0 && currentIndex < galleryItems.length - 1) {
+                            currentIndex++;
+                            updateGalleryView();
+                        } else if (diffX > 0 && currentIndex > 0) {
+                            currentIndex--;
+                            updateGalleryView();
+                        }
+                    }
+                }, { passive: true });
+
                 span.appendChild(wrapper);
             }
         } else if (url.includes(".gifv") || url.includes(".mp4") || url.includes("v.redd.it/") || isRedditVideoComment) { // Video
@@ -1929,3 +1965,10 @@ function trackEvent(eventName, eventData) {
         }
     } catch {}
 }
+
+document.addEventListener("click", (e) => {
+    const timestampEl = e.target && typeof e.target.closest === "function" ? e.target.closest(".timestamp") : null;
+    if (timestampEl) {
+        timestampEl.classList.toggle("show-utc");
+    }
+});
