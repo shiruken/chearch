@@ -1387,7 +1387,7 @@ function generateHTML(data, renderMarkdown, showThumbnails, hasMore = true, next
         if (obj.created_utc) {
             const date = new Date(obj.created_utc * 1000);
             if (!isNaN(date.getTime())) {
-                timestamp = date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+                timestamp = date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "medium" });
                 utcTimestamp = date.toISOString().replace(".000Z", "Z");
             }
         }
