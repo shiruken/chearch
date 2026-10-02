@@ -563,3 +563,50 @@ span.score {
     max-width: 100%;
 }
 
+/* Reddit Markdown Spoilers */
+.md-spoiler-text {
+    background-color: #2D3748;
+    color: transparent;
+    text-shadow: 0 0 7px rgba(255, 255, 255, 0.7);
+    border-radius: 3px;
+    padding: 0 5px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    transition: background-color 0.15s, color 0.15s, text-shadow 0.15s;
+}
+
+.md-spoiler-text:hover,
+.md-spoiler-text.revealed {
+    background-color: rgba(74, 85, 104, 0.35);
+    color: inherit;
+    text-shadow: none;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.md-spoiler-text:focus-visible {
+    outline: 2px solid #63B3ED;
+    outline-offset: 1px;
+}
+
+.md-spoiler-text:not(.revealed):not(:hover) * {
+    color: transparent !important;
+    text-shadow: 0 0 7px rgba(255, 255, 255, 0.7);
+}
+
+.md-spoiler-text:not(.revealed):not(:hover) a {
+    pointer-events: none;
+}
+
+.md-spoiler-text:not(.revealed):not(:hover) mark,
+.md-spoiler-text:not(.revealed):not(:hover) code {
+    background-color: transparent !important;
+}
+
+.md-spoiler-text:not(.revealed):not(:hover) button.delete {
+    display: none;
+}
+

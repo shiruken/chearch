@@ -1576,21 +1576,38 @@ renderer.context.link_attributes = function(e, n, t) {
 };
 const markdownParser = SnuOwnd.getParser(renderer, SnuOwnd.getParser().extensions | SnuOwnd.MKDEXT_FENCED_CODE);
 
+function decodeHtmlEntities(str) {
+    if (!str || !str.includes('&')) return str || "";
+    return str.replace(/&(?:lt|gt|quot|#39|#039|apos|amp);/g, match => {
+        switch (match) {
+            case '&lt;': return '<';
+            case '&gt;': return '>';
+            case '&quot;': return '"';
+            case '&#39;':
+            case '&#039;':
+            case '&apos;': return "'";
+            case '&amp;': return '&';
+            default: return match;
+        }
+    });
+}
+
 function formatText(text, use_markdown) {
     if (!text) return "";
     if (use_markdown) {
-        text = text.replace(/&amp;/g, "&");
-        text = text.replace(/(^|\n)&gt; ?/g, "$1> ");
+        text = decodeHtmlEntities(text);
         text = markdownParser.render(text);
 
         // Link native Giphy embeds
-        text = text.replace(/!\[gif\]\(giphy\|(\w+)[\|\w]*\)/g, (match, id) =>
-            `<a href="https://media.giphy.com/media/${id}/giphy.gif" target="_blank" rel="noopener noreferrer">${match}</a>`
-        );
+        if (text.includes("![gif](")) {
+            text = text.replace(/!\[gif\]\(giphy\|(\w+)[\|\w]*\)/g, (match, id) =>
+                `<a href="https://media.giphy.com/media/${id}/giphy.gif" target="_blank" rel="noopener noreferrer">${match}</a>`
+            );
+        }
 
         return text;
     } else {
-        return escapeHTML(text).replaceAll("\n", "<br>");
+        return escapeHTML(decodeHtmlEntities(text)).replaceAll("\n", "<br>");
     }
 }
 
@@ -1971,5 +1988,18 @@ document.addEventListener("click", (e) => {
     const timestampEl = e.target && typeof e.target.closest === "function" ? e.target.closest(".timestamp") : null;
     if (timestampEl) {
         timestampEl.classList.toggle("show-utc");
+    }
+});
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+        const spoiler = e.target && typeof e.target.closest === "function" ? e.target.closest(".md-spoiler-text") : null;
+        if (spoiler) {
+            if (typeof e.target.closest === "function" && e.target.closest("a") && spoiler.classList.contains("revealed")) {
+                return;
+            }
+            e.preventDefault();
+            spoiler.classList.toggle("revealed");
+        }
     }
 });
